@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "qml-mor"
+version = "0.1.0"
+description = ""
+authors = ["Mazen Ali <mazen.ali@itwm.fraunhofer.de>"]
+readme = "README.md"
+packages = [{include = "qml_mor"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pythreejs = "^2.4.1"
+ipywidgets = "7.7.1"
+qiskit = {extras = ["visualization"], version = "^0.39.5"}
+matplotlib = "^3.6.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

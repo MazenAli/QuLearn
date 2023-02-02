@@ -12,7 +12,11 @@ pythreejs = "^2.4.1"
 ipywidgets = "7.7.1"
 qiskit = {extras = ["visualization"], version = "^0.39.5"}
 matplotlib = "^3.6.3"
+scikit-learn = "^1.2.1"
 
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^0.991"
 
 [build-system]
 requires = ["poetry-core"]

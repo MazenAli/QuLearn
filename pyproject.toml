@@ -13,6 +13,8 @@ ipywidgets = "7.7.1"
 qiskit = {extras = ["visualization"], version = "^0.39.5"}
 matplotlib = "^3.6.3"
 scikit-learn = "^1.2.1"
+pennylane = "^0.28.0"
+torch = "^1.13.1"
 
 
 [tool.poetry.group.dev.dependencies]

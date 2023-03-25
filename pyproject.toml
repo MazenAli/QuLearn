@@ -15,6 +15,8 @@ matplotlib = "^3.6.3"
 scikit-learn = "^1.2.1"
 pennylane = "^0.28.0"
 torch = "^1.13.1"
+pyyaml = "^6.0"
+pennylane-lightning = {extras = ["gpu"], version = "^0.29.0"}
 
 
 [tool.poetry.group.dev.dependencies]

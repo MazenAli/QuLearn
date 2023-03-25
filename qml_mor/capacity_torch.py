@@ -1,4 +1,5 @@
-from typing import Tuple, Optional, TypeAlias
+from typing import List, Union, Tuple, Optional, TypeAlias
+import warnings
 import torch
 import numpy as np
 
@@ -15,8 +16,10 @@ def capacity(
     Nstep: int = 1,
     opt_steps: int = 300,
     opt_stop: float = 1e-16,
+    early_stop: bool = True,
     seed: Optional[int] = None,
-) -> int:
+    cuda: bool = False,
+) -> List[int]:
     """
     Estimates the memory capacity of a quantum neural network model
     over a range of values of N.
@@ -24,7 +27,7 @@ def capacity(
 
     Args:
         Nmin (int): The minimum value of N.
-        Nmax (int): The maximum value of N.
+        Nmax (int): The maximum value of N, included.
         sizex (int): The size of the input feature vector.
         num_samples (int): The number of samples to use for computing the capacity.
         qnn_model: The quantum neural network model.
@@ -34,23 +37,31 @@ def capacity(
             Defaults to 300.
         opt_stop (float, optional): The convergence threshold for the optimization.
             Defaults to 1e-16.
+        early_stop (bool, optional): Stops iterations early if previous
+            capacity at least as large. Defaults to True.
+        seed (int, optional): The random seed to use for generating the dataset.
+            Defaults to None.
+        cuda (bool, optional): Set True if run on GPU. Defaults to False.
 
     Returns:
-        int: The maximum capacity over the range of N.
+        List[int]: List of capacities over the range of N.
     """
 
     capacities = []
-    for N in range(Nmin, Nmax, Nstep):
+    Cprev = 0
+    for N in range(Nmin, Nmax + 1, Nstep):
         mre = fit_labels(
-            N, sizex, num_samples, qnn_model, params, opt_steps, opt_stop, seed
+            N, sizex, num_samples, qnn_model, params, opt_steps, opt_stop, seed, cuda
         )
-        m = int(np.log2(1.0 / mre))
+        m = max(int(np.log2(1.0 / mre)), 0)
         C = N * m
         capacities.append(C)
 
-    C = max(capacities)
+        if C <= Cprev and N != Nmax:
+            warnings.warn("Stopping early, capacity not improving.")
+            break
 
-    return C
+    return capacities
 
 
 def fit_labels(
@@ -62,6 +73,7 @@ def fit_labels(
     opt_steps: int = 300,
     opt_stop: float = 1e-16,
     seed: Optional[int] = None,
+    cuda: bool = False,
 ) -> float:
     """
     Fits labels to a quantum neural network model and returns the mean relative error.
@@ -76,39 +88,32 @@ def fit_labels(
             Defaults to 300.
         opt_stop (float, optional): The convergence threshold for the optimization.
             Defaults to 1e-16.
+        seed (int, optional): The random seed to use for generating the dataset.
+            Defaults to None.
+        cuda (bool, optional): Set True if run on GPU. Defaults to False.
 
     Returns:
         float: The mean relative error.
     """
 
-    x, y = gen_dataset(N, sizex, num_samples, seed)
+    x, y = gen_dataset(N, sizex, num_samples, seed, cuda)
 
     mre_sample = []
+    mse_loss = torch.nn.MSELoss()
     for s in range(num_samples):
-
-        def cost(params):
-            pred = torch.tensor(
-                [qnn_model(x[k], params) for k in range(N)],
-                dtype=torch.float64,
-                requires_grad=True,
-            )
-            loss = torch.nn.MSELoss()(y[s], pred)
-            return loss
 
         opt = torch.optim.Adam(params, lr=0.1, amsgrad=True)
         for n in range(opt_steps):
             opt.zero_grad()
-            loss = cost(params)
+            pred = torch.stack([qnn_model(x[k], params) for k in range(N)])
+            loss = mse_loss(pred, y[s])
             loss.backward()
             opt.step()
 
             if loss <= opt_stop:
                 break
 
-        y_pred = torch.tensor(
-            [qnn_model(x[k], params) for k in range(N)],
-            requires_grad=False,
-        )
+        y_pred = torch.stack([qnn_model(x[k], params) for k in range(N)])
         mre = torch.mean(torch.abs((y[s] - y_pred) / y_pred))
         mre_sample.append(mre)
 
@@ -123,6 +128,7 @@ def gen_dataset(
     seed: Optional[int] = None,
     scale: float = 2.0,
     shift: float = -1.0,
+    cuda: bool = False,
 ) -> Tuple[Tensor, Tensor]:
     """
     Generates a dataset of inputs x and outputs y for a QNN.
@@ -137,6 +143,7 @@ def gen_dataset(
             in [0,1]. Defaults to 2.0.
         shift (float, optional): The shift value for uniform random numbers [0,1].
             Defaults to -1.0.
+        cuda (bool, optional): Set True if run on GPU. Defaults to False.
 
     Returns:
         Tuple[Tensor, Tensor]: A tuple containing the input
@@ -147,12 +154,19 @@ def gen_dataset(
     scale = 2.0
     shift = -1.0
 
+    device = torch.device("cpu")
+    if cuda:
+        device = torch.device("cuda")
+
     if seed is not None:
         torch.manual_seed(seed)
-    x = scale * torch.rand(N, sizex, requires_grad=False) + shift
+    x = scale * torch.rand(N, sizex, dtype=torch.float64, requires_grad=False) + shift
     y = (
         scale * torch.rand(num_samples, N, dtype=torch.float64, requires_grad=False)
         + shift
     )
+
+    x.to(device)
+    y.to(device)
 
     return x, y

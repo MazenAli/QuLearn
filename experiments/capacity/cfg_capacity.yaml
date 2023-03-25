@@ -1,0 +1,14 @@
+Nmin: 2
+Nmax: 3
+Nstep: 1
+num_qubits: 3
+num_reups: 1
+num_layers: 1
+omega: 0.0
+num_samples: 5
+opt_steps: 300
+opt_stop: 1e-16
+early_stop: true
+seed: 0
+save_dir: "./results/torch_iqpe_reup_parity"
+cuda: false

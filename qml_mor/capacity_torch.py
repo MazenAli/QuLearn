@@ -160,13 +160,17 @@ def gen_dataset(
 
     if seed is not None:
         torch.manual_seed(seed)
-    x = scale * torch.rand(N, sizex, dtype=torch.float64, requires_grad=False) + shift
-    y = (
-        scale * torch.rand(num_samples, N, dtype=torch.float64, requires_grad=False)
+    x = (
+        scale
+        * torch.rand(N, sizex, dtype=torch.float64, device=device, requires_grad=False)
         + shift
     )
-
-    x.to(device)
-    y.to(device)
+    y = (
+        scale
+        * torch.rand(
+            num_samples, N, dtype=torch.float64, device=device, requires_grad=False
+        )
+        + shift
+    )
 
     return x, y

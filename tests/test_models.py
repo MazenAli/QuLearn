@@ -99,3 +99,7 @@ class TestParities(unittest.TestCase):
         observables = parities(NUM_QUBITS)
         for obs in observables:
             self.assertIsInstance(obs, qml.operation.Observable)
+
+
+if __name__ == "__main__":
+    unittest.main()

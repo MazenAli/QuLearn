@@ -1,86 +1,175 @@
-def estimate_fat_shattering_dimension(d, hidden_units, max_samples, step_size, gamma):
+from typing import TypeAlias, Optional, Set, Tuple
+import warnings
+from itertools import product
+import numpy as np
+from scipy.stats import qmc
+import torch
+from .train import train_torch
+
+Tensor: TypeAlias = torch.Tensor
+Optimizer: TypeAlias = torch.optim.Optimizer
+
+
+def fat_shattering_dim(
+    dmin: int,
+    dmax: int,
+    sizex: int,
+    Sb: int,
+    Sr: int,
+    opt: Optimizer,
+    qnn_model,
+    params,
+    gamma: float,
+    dstep: int = 1,
+    opt_steps: int = 300,
+    opt_stop: float = 1e-16,
+    seed: Optional[int] = None,
+    cuda: bool = False,
+):
     """
     Estimate the fat-shattering dimension for a model with a given architecture.
 
-    Parameters
-    ----------
-    d : int
-        Dimension of the feature space.
-    hidden_units : int
-        Number of hidden units in the model.
-    max_samples : int
-        Maximum number of samples to use for fat-shattering dimension estimation.
-    step_size : int
-        Step size for incrementing the number of samples during estimation.
-    gamma : float
-        The margin value.
+    Args:
+        dmin (int): Iteration start for dimension check.
+        dmax (int): Iteration stop for dimension check (including).
+        sizex (int): Dimension of input features.
+        Sb (int): Number of samples for the b vector.
+        Sr (int): Number of samples for the r vector.
+        opt (Optimizer): Torch optimizer.
+        qnn_model: QNN model.
+        params: Model parameters.
+        gamma (float): The margin value.
+        dstep (int, optional): Dimension iteration step size.
+            Defaults to 1.
+        opt_steps (int, optional): The number of optimization steps.
+            Defaults to 300.
+        opt_stop (float, optional): The convergence threshold for the optimization.
+            Defaults to 1e-16.
+        cuda (bool, optional): Set True if run on GPU. Defaults to False.
 
-    Returns
-    -------
-    int
-        The estimated fat-shattering dimension.
+    Returns:
+        int: The estimated fat-shattering dimension.
     """
 
+    for d in range(dmin, dmax + 1, dstep):
+        X = gen_synthetic_features(d, sizex, seed, cuda=cuda)
+        b = generate_samples_b(d, Sb)
+        r = generate_samples_r(d, Sr)
+        shattered = check_shattering(
+            opt, qnn_model, params, X, b, r, gamma, opt_steps, opt_stop, cuda
+        )
 
-def check_shattering(model, X, r, gamma):
+        if not shattered:
+            if d == dmin:
+                warnings.warn(f"Stopped at dmin = {dmin}.")
+
+            return d - 1
+
+    warnings.warn(f"Reached dmax = {dmax}.")
+    return dmax
+
+
+def check_shattering(
+    opt: Optimizer,
+    qnn_model,
+    params,
+    X: Tensor,
+    b: np.ndarray,
+    r: np.ndarray,
+    gamma: float,
+    opt_steps: int = 300,
+    opt_stop: float = 1e-16,
+    cuda: bool = False,
+) -> bool:
     """
-    Check if the model shatters the given samples X with margin gamma.
+    Check if the model shatters the given set of samples X with margin gamma.
 
-    Parameters
-    ----------
-    model : Keras model
-        The trained model.
-    X : numpy.ndarray
-        An array of shape (n_samples, d) containing input samples.
-    r : numpy.ndarray
-        An array of shape (n_samples,) containing r values.
-    gamma : float
-        The margin value.
+    Args:
+        opt: The torch optimizer.
+        qnn_model: The QNN model.
+        params: The model initial parameters.
+        X (Tensor): The set of samples to shatter, dimension (d, sizex).
+        b (numpy.ndarray): An array of shape (Sb, d) containing b values.
+        r (numpy.ndarray): An array of shape (Sr, d) containing r values.
+        gamma (float): The margin value.
+        opt_steps (int, optional): The number of optimization steps.
+            Defaults to 300.
+        opt_stop (float, optional): The convergence threshold for the optimization.
+            Defaults to 1e-16.
+        cuda (bool, optional): Set True if run on GPU. Defaults to False.
 
-    Returns
-    -------
-    bool
-        True if the model shatters the samples, False otherwise.
+    Returns:
+        bool: True if the model shatters the samples, False otherwise.
     """
-    # Function implementation
+
+    Y = gen_synthetic_labels(b, r, gamma, gamma, cuda)
+    d = len(X)
+
+    for sr in range(len(r)):
+
+        shattered = True
+        for sb in range(len(b)):
+            opt_params = train_torch(
+                opt, qnn_model, params, X, Y[sr, sb], opt_steps, opt_stop
+            )
+            predictions = torch.stack([qnn_model(X[k], opt_params) for k in range(d)])
+
+            for i, pred in enumerate(predictions):
+                if b[sb, i] == 1 and not (pred >= r[sr, i] + gamma):
+                    shattered = False
+                    break
+                if b[sb, i] == 0 and not (pred <= r[sr, i] - gamma):
+                    shattered = False
+                    break
+
+            if not shattered:
+                break
+
+        if shattered:
+            return True
+
+    return False
 
 
-def generate_samples_b(d, S):
+def generate_samples_b(d: int, S: int) -> np.ndarray:
     """
     Generate S unique samples of b from {0, 1}^d.
 
-    Parameters
-    ----------
-    d : int
-        Dimension of the feature space.
-    S : int
-        Number of samples to generate.
+    Args:
+        d (int): Dimension of the feature space.
+        S (int): Number of samples to generate.
 
-    Returns
-    -------
-    numpy.ndarray
-        An array of shape (S, d) containing unique samples of b.
+    Returns:
+        numpy.ndarray: An array of shape (S, d) containing unique samples of b.
     """
-    # Function implementation
+
+    max_values = 2**d
+    if S >= max_values:
+        possible_values = list(product([0, 1], repeat=d))
+        return np.array(possible_values)
+    else:
+        samples: Set[Tuple[int, ...]] = set()
+        while len(samples) < S:
+            b_sample = tuple(np.random.randint(0, 2, size=d))
+            samples.add(b_sample)
+        return np.array(list(samples))
 
 
-def generate_samples_r(d, S):
+def generate_samples_r(d: int, S: int) -> np.ndarray:
     """
     Generate S samples of r from [0, 1]^d using Latin Hypercube Sampling.
 
-    Parameters
-    ----------
-    d : int
-        Dimension of the feature space.
-    S : int
-        Number of samples to generate.
+    Args:
+        d (int): Dimension of the feature space.
+        S (int): Number of samples to generate.
 
-    Returns
-    -------
-    numpy.ndarray
-        An array of shape (S, d) containing samples of r.
+    Returns:
+        numpy.ndarray: An array of shape (S, d) containing samples of r.
     """
-    # Function implementation
+
+    sampler = qmc.LatinHypercube(d=d)
+    r_samples = sampler.random(n=S)
+    return r_samples
 
 
 def gen_synthetic_features(
@@ -92,7 +181,7 @@ def gen_synthetic_features(
     cuda: bool = False,
 ) -> Tensor:
     """
-    Generates d inputs x  of dimension sizex sampled uniformly from scale*[0,1]+shift.
+    Generates d inputs x of dimension sizex sampled uniformly from scale*[0,1]+shift.
 
     Args:
         d (int): The number of inputs x to generate.
@@ -121,7 +210,7 @@ def gen_synthetic_features(
 
     x = (
         scale
-        * torch.rand(N, sizex, dtype=torch.float64, device=device, requires_grad=False)
+        * torch.rand(d, sizex, dtype=torch.float64, device=device, requires_grad=False)
         + shift
     )
 
@@ -136,7 +225,7 @@ def gen_synthetic_labels(
     cuda: bool = False,
 ) -> Tensor:
     """
-    Generate a constant labels values equal to r_i + gamma + c
+    Generate constant label values equal to r_i + gamma + c
     when b_i = 1 and r_i - gamma - c when b_i = 0.
 
     Args:
@@ -164,14 +253,15 @@ def gen_synthetic_labels(
 
     if d1 != d2:
         raise ValueError(
-            f"The length of b[0] and r[0] are {d1} and {d2}. Should be constant and the same."
+            f"The length of b[0] and r[0] are {d1} and {d2}. "
+            f"Should be constant and the same."
         )
 
     device = torch.device("cpu")
     if cuda:
         device = torch.device("cuda")
 
-    labels = np.zeros(Sr, Sb, d)
+    labels = np.zeros((Sr, Sb, d))
     for sr in range(Sr):
         for sb in range(Sb):
             for i in range(d):

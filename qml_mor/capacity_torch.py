@@ -1,9 +1,12 @@
-from typing import List, Union, Tuple, Optional, TypeAlias
+from typing import List, Tuple, Optional, TypeAlias
 import warnings
 import torch
 import numpy as np
 
+from .train import train_torch
+
 Tensor: TypeAlias = torch.Tensor
+Optimizer: TypeAlias = torch.optim.Optimizer
 
 
 def capacity(
@@ -11,6 +14,7 @@ def capacity(
     Nmax: int,
     sizex: int,
     num_samples: int,
+    opt: Optimizer,
     qnn_model,
     params,
     Nstep: int = 1,
@@ -30,6 +34,7 @@ def capacity(
         Nmax (int): The maximum value of N, included.
         sizex (int): The size of the input feature vector.
         num_samples (int): The number of samples to use for computing the capacity.
+        opt: The torch optimizer.
         qnn_model: The quantum neural network model.
         params: The model parameters.
         Nstep (int, optional): Step size for N. Defaults to 1.
@@ -51,13 +56,22 @@ def capacity(
     Cprev = 0
     for N in range(Nmin, Nmax + 1, Nstep):
         mre = fit_labels(
-            N, sizex, num_samples, qnn_model, params, opt_steps, opt_stop, seed, cuda
+            N,
+            sizex,
+            num_samples,
+            opt,
+            qnn_model,
+            params,
+            opt_steps,
+            opt_stop,
+            seed,
+            cuda,
         )
         m = max(int(np.log2(1.0 / mre)), 0)
         C = N * m
         capacities.append(C)
 
-        if C <= Cprev and N != Nmax:
+        if C <= Cprev and N != Nmax and early_stop:
             warnings.warn("Stopping early, capacity not improving.")
             break
 
@@ -68,6 +82,7 @@ def fit_labels(
     N: int,
     sizex: int,
     num_samples: int,
+    opt: Optimizer,
     qnn_model,
     params,
     opt_steps: int = 300,
@@ -82,6 +97,7 @@ def fit_labels(
         N (int): The number of inputs.
         sizex (int): The size of the input feature vector.
         num_samples (int): The number of samples for random output labels.
+        opt: The torch optimizer.
         qnn_model: The quantum neural network model.
         params: The model parameters.
         opt_steps (int, optional): The number of optimization steps.
@@ -99,19 +115,9 @@ def fit_labels(
     x, y = gen_dataset(N, sizex, num_samples, seed, cuda)
 
     mre_sample = []
-    mse_loss = torch.nn.MSELoss()
     for s in range(num_samples):
 
-        opt = torch.optim.Adam(params, lr=0.1, amsgrad=True)
-        for n in range(opt_steps):
-            opt.zero_grad()
-            pred = torch.stack([qnn_model(x[k], params) for k in range(N)])
-            loss = mse_loss(pred, y[s])
-            loss.backward()
-            opt.step()
-
-            if loss <= opt_stop:
-                break
+        params = train_torch(opt, qnn_model, params, x, y[s], opt_steps, opt_stop)
 
         y_pred = torch.stack([qnn_model(x[k], params) for k in range(N)])
         mre = torch.mean(torch.abs((y[s] - y_pred) / y_pred))

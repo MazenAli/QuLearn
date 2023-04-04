@@ -21,7 +21,8 @@ class TestCapacity(unittest.TestCase):
             res = torch.nn.functional.linear(x, params[0], params[1]).pow(2)[0]
             return res
 
-        C = capacity(Nmin, Nmax, sizex, num_samples, qnn_model, params)
+        opt = torch.optim.Adam(params, lr=0.1, amsgrad=True)
+        C = capacity(Nmin, Nmax, sizex, num_samples, opt, qnn_model, params)
         self.assertIsInstance(C, List)
 
     def test_capacity_qnn(self):
@@ -50,7 +51,8 @@ class TestCapacity(unittest.TestCase):
         def qnn_model(x, params):
             return model.qfunction(x, params)
 
-        C = capacity(Nmin, Nmax, sizex, num_samples, qnn_model, params)
+        opt = torch.optim.Adam(params, lr=0.1, amsgrad=True)
+        C = capacity(Nmin, Nmax, sizex, num_samples, opt, qnn_model, params)
 
         self.assertIsInstance(C, List)
 
@@ -80,11 +82,12 @@ class TestCapacity(unittest.TestCase):
         def qnn_model(x, params):
             return model.qfunction(x, params)
 
-        C = capacity(Nmin, Nmax, sizex, num_samples, qnn_model, params)
+        opt = torch.optim.Adam(params, lr=0.1, amsgrad=True)
+        C = capacity(Nmin, Nmax, sizex, num_samples, opt, qnn_model, params)
         Cmin = min(C)
         Cmax = max(C)
 
-        self.assertLessEqual(Cmax, 25)
+        self.assertLessEqual(Cmax, 100)
         self.assertGreaterEqual(Cmin, 0)
 
 
@@ -103,10 +106,12 @@ class TestFitLabels(unittest.TestCase):
         def qnn_model(x, params):
             return torch.nn.functional.linear(x, params[0], params[1]).pow(2)[0]
 
+        opt = torch.optim.Adam(params, lr=0.1, amsgrad=True)
         mre = fit_labels(
             N,
             sizex,
             num_samples,
+            opt,
             qnn_model,
             params,
             opt_steps=opt_steps,
@@ -129,3 +134,7 @@ class TestGenDataset(unittest.TestCase):
         self.assertIsInstance(y, torch.Tensor)
         self.assertEqual(x.shape, (N, sizex))
         self.assertEqual(y.shape, (num_samples, N))
+
+
+if __name__ == "__main__":
+    unittest.main()

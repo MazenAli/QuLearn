@@ -139,6 +139,9 @@ def main(args):
         qdevice = qml.device("lightning.gpu", wires=args.num_qubits, shots=shots)
     qnode = qml.QNode(qnn_model.qfunction, qdevice, interface="torch")
 
+    # Set optimizer
+    opt = torch.optim.Adam(params, lr=0.1, amsgrad=True)
+
     # Estimate capacity
     Nmin = args.Nmin
     Nmax = args.Nmax
@@ -154,6 +157,7 @@ def main(args):
         Nmax,
         sizex,
         num_samples,
+        opt,
         qnode,
         params,
         Nstep=Nstep,

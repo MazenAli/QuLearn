@@ -22,6 +22,15 @@ pennylane-lightning = {extras = ["gpu"], version = "^0.29.0"}
 [tool.poetry.group.dev.dependencies]
 mypy = "^0.991"
 
+[tool.mypy]
+[[tool.mypy.overrides]]
+module = "pennylane"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "scipy.stats"
+ignore_missing_imports = true
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

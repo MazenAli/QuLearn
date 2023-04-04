@@ -151,16 +151,16 @@ def iqpe_reupload_su2_parity(
     of the parity of Pauli Z operators.
 
     Args:
-        x (torch.Tensor): Input tensor of shape (num_qubits,)
-        init_theta (torch.Tensor): Initial rotation angles for each qubit,
+        x (Tensor): Input tensor of shape (num_qubits,)
+        init_theta (Tensor): Initial rotation angles for each qubit,
             of shape (reps, num_qubits)
-        theta (torch.Tensor): Rotation angles for each layer and each qubit,
+        theta (Tensor): Rotation angles for each layer and each qubit,
             of shape (reps, num_qubits, 3)
-        W (torch.Tensor): Interaction weights of shape (num_qubits, num_qubits)
+        W (Tensor): Interaction weights of shape (num_qubits, num_qubits)
         omega (float, optional): Exponential feature scaling factor. Defaults to 0.0.
 
     Returns:
-        float: Expectation value of the parity of Pauli Z operators
+        QFuncOutput: Expectation value of the parity of Pauli Z operators
     """
 
     shape_init = init_theta.shape

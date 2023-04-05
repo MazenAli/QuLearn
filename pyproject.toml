@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "qml-mor"
 version = "0.1.0"
-description = ""
+description = "QML for Regression and Model Reduction"
 authors = ["Mazen Ali <mazen.ali@itwm.fraunhofer.de>"]
 readme = "README.md"
 packages = [{include = "qml_mor"}]

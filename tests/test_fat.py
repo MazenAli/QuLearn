@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import unittest
 
-from qml_mor.fat_torch import (
+from qml_mor.fat import (
     fat_shattering_dim,
     check_shattering,
     generate_samples_b,

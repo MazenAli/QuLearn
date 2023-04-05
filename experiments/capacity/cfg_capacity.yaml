@@ -6,6 +6,8 @@ num_reups: 1
 num_layers: 1
 omega: 0.0
 num_samples: 5
+lr: 0.1
+amsgrad: true
 opt_steps: 300
 opt_stop: 1e-16
 early_stop: true

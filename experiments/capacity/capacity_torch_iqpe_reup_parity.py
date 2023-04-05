@@ -8,7 +8,9 @@ import json
 import torch
 import pennylane as qml
 from qml_mor.models import IQPEReuploadSU2Parity
-from qml_mor.capacity_torch import capacity
+from qml_mor.capacity import capacity
+from qml_mor.datagen import DataGenCapacity
+from qml_mor.optimize import AdamTorch
 
 
 def parse_args():
@@ -66,6 +68,18 @@ def parse_args():
         type=int,
         default=config["num_samples"],
         help="Number of samples for random labels",
+    )
+    parser.add_argument(
+        "--lr",
+        type=float,
+        default=config["lr"],
+        help="Learning rate",
+    )
+    parser.add_argument(
+        "--amsgrad",
+        type=bool,
+        default=config["amsgrad"],
+        help="Use amsgrad",
     )
     parser.add_argument(
         "--opt_steps",
@@ -140,31 +154,35 @@ def main(args):
     qnode = qml.QNode(qnn_model.qfunction, qdevice, interface="torch")
 
     # Set optimizer
-    opt = torch.optim.Adam(params, lr=0.1, amsgrad=True)
+    loss_fn = torch.nn.MSELoss()
+    opt = AdamTorch(
+        params=params,
+        loss_fn=loss_fn,
+        lr=args.lr,
+        amsgrad=args.amsgrad,
+        opt_steps=args.opt_steps,
+        opt_stop=args.opt_stop,
+    )
+
+    # Set data generating method
+    sizex = num_qubits
+    datagen = DataGenCapacity(sizex=sizex, seed=seed, device=cdevice)
 
     # Estimate capacity
     Nmin = args.Nmin
     Nmax = args.Nmax
     Nstep = args.Nstep
-    sizex = num_qubits
     num_samples = args.num_samples
-    opt_steps = args.opt_steps
-    opt_stop = args.opt_stop
 
     start_time = time.time()
     capacities = capacity(
-        Nmin,
-        Nmax,
-        sizex,
-        num_samples,
-        opt,
-        qnode,
-        params,
+        Nmin=Nmin,
+        Nmax=Nmax,
+        num_samples=num_samples,
+        datagen=datagen,
+        opt=opt,
+        model=qnode,
         Nstep=Nstep,
-        opt_steps=opt_steps,
-        opt_stop=opt_stop,
-        seed=seed,
-        cuda=cuda,
     )
     end_time = time.time()
     time_taken = end_time - start_time
@@ -192,8 +210,8 @@ def main(args):
         "num_params_obs": num_params_obs,
         "num_params": num_params,
         "num_samples": num_samples,
-        "opt_steps": opt_steps,
-        "opt_stop": opt_stop,
+        "opt_steps": args.opt_steps,
+        "opt_stop": args.opt_stop,
         "seed": seed,
         "capacities": capacities,
     }

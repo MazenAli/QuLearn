@@ -1,42 +1,44 @@
 from abc import ABC, abstractmethod
-from typing import List, TypeAlias
+from typing import List, TypeAlias, TypeVar, Generic
 import torch
 import pennylane as qml
 
 Tensor: TypeAlias = torch.Tensor
 QFuncOutput: TypeAlias = qml.measurements.ExpectationMP
 Observable: TypeAlias = qml.operation.Observable
+X = TypeVar("X")
+P = TypeVar("P")
 
 
-class QNNModel(ABC):
+class QNNModel(ABC, Generic[X, P]):
     """Abstract base class for a quantum neural network model."""
 
-    def __init__(self, params):
+    def __init__(self) -> None:
         pass
 
     @abstractmethod
-    def qfunction(self, x, params):
+    def qfunction(self, x: X, params: P) -> QFuncOutput:
         """Abstract method for the quantum function."""
         pass
 
-    def circuit(self, x, params):
+    def circuit(self, x: X, params: P) -> QFuncOutput:
         """Constructs a circuit for a given input and parameters."""
-        return self.qfunction(self, x, params)
+        return self.qfunction(x, params)
 
     @property
     @abstractmethod
-    def params(self):
+    def params(self) -> P:
         """Abstract property for the model parameters."""
         pass
 
     @params.setter
     @abstractmethod
-    def params(self, params_):
+    def params(self, params_: P) -> None:
         """Abstract setter for the model parameters."""
         pass
 
 
-class IQPEReuploadSU2Parity(QNNModel):
+class IQPEReuploadSU2Parity(QNNModel[Tensor, List[Tensor]]):
     """
     An IQP embedding circuit with additional SU(2) gates and parity measurements.
 
@@ -47,7 +49,7 @@ class IQPEReuploadSU2Parity(QNNModel):
             Defaults to 0.0.
     """
 
-    def __init__(self, params: List[Tensor], omega: float = 0.0):
+    def __init__(self, params: List[Tensor], omega: float = 0.0) -> None:
         """
         Initializes the IQPE + SU(2) circuit.
 
@@ -70,7 +72,7 @@ class IQPEReuploadSU2Parity(QNNModel):
         the input features and the parameters.
 
         Args:
-            x (Tensor): The input features for the circuit.
+            x (Tensor): The input features for the circuit of dimension (sizex,).
             params (List[Tensor]): The parameters for the circuit. Must be a list of
                 three tensors: the initial thetas, the main thetas, and the weights W.
 
@@ -102,7 +104,7 @@ class IQPEReuploadSU2Parity(QNNModel):
         return [self.__init_theta, self.__theta, self.__W]
 
     @params.setter
-    def params(self, params_: List[Tensor]):
+    def params(self, params_: List[Tensor]) -> None:
         """
         Sets the parameters of the circuit.
 
@@ -132,7 +134,7 @@ class IQPEReuploadSU2Parity(QNNModel):
         return self.__omega
 
     @omega.setter
-    def omega(self, omega_: float):
+    def omega(self, omega_: float) -> None:
         """
         Sets the exponential feature scaling factor.
 

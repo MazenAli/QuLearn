@@ -4,7 +4,7 @@ from itertools import product
 import numpy as np
 from scipy.stats import qmc
 import torch
-from .train import train_torch
+from .optimize import train_torch
 
 Tensor: TypeAlias = torch.Tensor
 Optimizer: TypeAlias = torch.optim.Optimizer

@@ -19,7 +19,7 @@ class TestCapacity(unittest.TestCase):
         num_layers = 1
         sizex = num_qubits
 
-        datagen = DataGenCapacity(sizex=sizex)
+        datagen = DataGenCapacity(sizex=sizex, num_samples=num_samples)
 
         omega = 1.0
         init_theta = torch.randn(num_reups, num_qubits, requires_grad=True)
@@ -40,7 +40,7 @@ class TestCapacity(unittest.TestCase):
         loss_fn = torch.nn.MSELoss()
         opt = AdamTorch(params, loss_fn, opt_steps=20)
 
-        C = capacity(Nmin, Nmax, num_samples, datagen, opt, qnn_model)
+        C = capacity(qnn_model, datagen, opt, Nmin, Nmax)
         Cmin = min(C)
         Cmax = max(C)
 
@@ -58,7 +58,7 @@ class TestFitRandLabels(unittest.TestCase):
         num_reups = 1
         num_layers = 1
 
-        datagen = DataGenCapacity(sizex=sizex)
+        datagen = DataGenCapacity(sizex=sizex, num_samples=num_samples)
 
         omega = 1.0
         init_theta = torch.randn(num_reups, num_qubits, requires_grad=True)
@@ -78,7 +78,7 @@ class TestFitRandLabels(unittest.TestCase):
 
         loss_fn = torch.nn.MSELoss()
         opt = AdamTorch(params, loss_fn, opt_steps=10)
-        mre = fit_rand_labels(N, num_samples, datagen, opt, qnn_model)
+        mre = fit_rand_labels(qnn_model, datagen, opt, N)
 
         self.assertIsInstance(mre, float)
 

@@ -166,22 +166,23 @@ def main(args):
 
     # Set data generating method
     sizex = num_qubits
-    datagen = DataGenCapacity(sizex=sizex, seed=seed, device=cdevice)
+    num_samples = args.num_samples
+    datagen = DataGenCapacity(
+        sizex=sizex, num_samples=num_samples, seed=seed, device=cdevice
+    )
 
     # Estimate capacity
     Nmin = args.Nmin
     Nmax = args.Nmax
     Nstep = args.Nstep
-    num_samples = args.num_samples
 
     start_time = time.time()
     capacities = capacity(
-        Nmin=Nmin,
-        Nmax=Nmax,
-        num_samples=num_samples,
+        model=qnode,
         datagen=datagen,
         opt=opt,
-        model=qnode,
+        Nmin=Nmin,
+        Nmax=Nmax,
         Nstep=Nstep,
     )
     end_time = time.time()

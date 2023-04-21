@@ -11,9 +11,9 @@ class TestDataGenCapacity(unittest.TestCase):
         num_samples = 10
         seed = 0
 
-        datagen = DataGenCapacity(sizex=sizex, seed=seed)
+        datagen = DataGenCapacity(sizex=sizex, num_samples=num_samples, seed=seed)
 
-        data = datagen.gen_data(N, num_samples)
+        data = datagen.gen_data(N)
         x = data["X"]
         y = data["Y"]
 
@@ -32,9 +32,9 @@ class TestDataGenFat(unittest.TestCase):
         gamma = 0.5
         seed = 0
 
-        datagen = DataGenFat(sizex=sizex, gamma=gamma, seed=seed)
+        datagen = DataGenFat(sizex=sizex, Sb=Sb, Sr=Sr, gamma=gamma, seed=seed)
 
-        data = datagen.gen_data(d, Sb, Sr)
+        data = datagen.gen_data(d)
         X = data["X"]
         Y = data["Y"]
         b = data["b"]

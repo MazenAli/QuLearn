@@ -7,6 +7,7 @@ from scipy.stats import qmc
 
 Tensor = Union[torch.Tensor, np.ndarray]
 Device = torch.device
+DataOut = Dict[str, Tensor]
 D = TypeVar("D")
 
 
@@ -66,12 +67,14 @@ class DataGenTorch(ABC, Generic[D]):
             torch.manual_seed(self.__seed)
 
 
-class DataGenCapacity(DataGenTorch[Dict[str, Tensor]]):
+class DataGenCapacity(DataGenTorch[DataOut]):
     """
     Generates data for capacity estimation.
 
     Args:
         sizex (int): The size of the input data.
+        num_samples (int, optional): The number of output samples to generate.
+            Defaults to 10.
         scale (float, optional): The re-scaling factor for uniform
             random numbers in [0, 1]. Defaults to 2.0.
         shift (float, optional): The shift value for uniform
@@ -81,30 +84,36 @@ class DataGenCapacity(DataGenTorch[Dict[str, Tensor]]):
     """
 
     def __init__(
-        self, sizex: int, scale: float = 2.0, shift: float = -1.0, *args, **kwargs
+        self,
+        sizex: int,
+        num_samples: int = 10,
+        scale: float = 2.0,
+        shift: float = -1.0,
+        *args,
+        **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
 
         self.sizex = sizex
+        self.num_samples = num_samples
         self.scale = scale
         self.shift = shift
 
-    def gen_data(self, N: int, num_samples: int = 10) -> Dict[str, Tensor]:
+    def gen_data(self, N: int) -> DataOut:
         """
         Generate the data.
 
         Args:
-            N (int): The number of inputs for the QNN.
-            num_samples (int): The number of output samples to generate. Defaults to 10.
+            N (int): The number of inputs for the model.
 
         Returns:
-            data (Dict[str, Tensor]): A dictionary containing the generated data.
+            data (DataOut): A dictionary containing the generated data.
         """
 
         X, Y = gen_dataset_capacity(
             N,
             self.sizex,
-            num_samples,
+            self.num_samples,
             self.seed,
             self.scale,
             self.shift,
@@ -116,12 +125,16 @@ class DataGenCapacity(DataGenTorch[Dict[str, Tensor]]):
         return data
 
 
-class DataGenFat(DataGenTorch[Dict[str, Tensor]]):
+class DataGenFat(DataGenTorch[DataOut]):
     """
     Generates data for estimating fat shattering dimension.
 
     Args:
         sizex (int): The size of the input data (dim of feature space).
+        Sb (int): The number of binary samples to check shattering.
+            Defaults to 10.
+        Sr (int): The number of level offset samples to check shattering.
+            Defaults to 10.
         gamma (float): The fat shattering parameter gamma.
             Defaults to 0.0 (pseudo-dimension).
         scale (float, optional): The re-scaling factor for uniform
@@ -135,6 +148,8 @@ class DataGenFat(DataGenTorch[Dict[str, Tensor]]):
     def __init__(
         self,
         sizex: int,
+        Sb: int = 10,
+        Sr: int = 10,
         gamma: float = 0.0,
         scale: float = 2.0,
         shift: float = -1.0,
@@ -144,30 +159,28 @@ class DataGenFat(DataGenTorch[Dict[str, Tensor]]):
         super().__init__(*args, **kwargs)
 
         self.sizex = sizex
+        self.Sb = Sb
+        self.Sr = Sr
         self.gamma = gamma
         self.scale = scale
         self.shift = shift
 
-    def gen_data(self, d: int, Sb: int = 10, Sr: int = 10) -> Dict[str, Tensor]:
+    def gen_data(self, d: int) -> DataOut:
         """
         Generate the data.
 
         Args:
             d (int): The number of inputs to shatter.
-            Sb (int): The number of binary samples to check shattering.
-                Defaults to 10.
-            Sr (int): The number of level offset samples to check shattering.
-                Defaults to 10.
 
         Returns:
-            data (Dict[str, Tensor]): A dictionary containing the generated data.
+            data (DataOut): A dictionary containing the generated data.
         """
 
         X = gen_synthetic_features(
             d, self.sizex, self.seed, self.scale, self.shift, self.device
         )
-        b = generate_samples_b_fat(d, Sb)
-        r = generate_samples_r_fat(d, Sr)
+        b = generate_samples_b_fat(d, self.Sb)
+        r = generate_samples_r_fat(d, self.Sr)
         Y = gen_synthetic_labels_fat(b, r, self.gamma, self.device)
 
         data = {"X": X, "Y": Y, "b": b, "r": r}

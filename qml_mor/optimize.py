@@ -1,4 +1,4 @@
-from typing import TypeAlias, Iterable, Dict
+from typing import TypeAlias, Iterable, Dict, Generic, TypeVar
 from abc import ABC, abstractmethod
 import torch
 import pennylane as qml
@@ -8,27 +8,30 @@ Loss: TypeAlias = torch.nn.Module
 Model: TypeAlias = qml.QNode
 Params = Iterable[Tensor]
 Data = Dict[str, Tensor]
+M = TypeVar("M")
+P = TypeVar("P")
+D = TypeVar("D")
 
 
-class Optimizer(ABC):
+class Optimizer(ABC, Generic[M, P, D]):
     """
     Abstract base class for optimization algorithms.
 
     Args:
-        params (Params): Parameters to optimize.
+        params (P): Parameters to optimize.
     """
 
-    def __init__(self, params: Params) -> None:
+    def __init__(self, params: P) -> None:
         self.params = params
 
     @abstractmethod
-    def optimize(self, model: Model, data: Data) -> Params:
+    def optimize(self, model: M, data: D) -> Params:
         """
         Optimize model parameters using the given data.
 
         Args:
-            model (Model): The model to optimize.
-            data (Data): The data used to optimize the model.
+            model (M): The model to optimize.
+            data (D): The data used to optimize the model.
 
         Returns:
             Params: The optimized parameters.
@@ -36,7 +39,7 @@ class Optimizer(ABC):
         pass
 
 
-class AdamTorch(Optimizer):
+class AdamTorch(Optimizer[Model, Params, Data]):
     """
     Wrapper for torch Adam.
 
@@ -62,7 +65,6 @@ class AdamTorch(Optimizer):
         opt_stop: float = 1e-16,
         **kwargs,
     ) -> None:
-
         self.params = params
         self.loss_fn = loss_fn
         self.lr = lr

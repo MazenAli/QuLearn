@@ -1,6 +1,5 @@
 from typing import TypeAlias
 import warnings
-import numpy as np
 import torch
 import pennylane as qml
 
@@ -103,20 +102,28 @@ def check_shattering(
     return False
 
 
-def normalize_const(weights: Tensor, gamma: float) -> float:
+def normalize_const(weights: Tensor, gamma: float, Rx: float) -> float:
     """
     Compute a normalization constant given a tensor of weights
     and the margin parameter gamma.
 
+    Rationale: the fat-shattering dimension of a linear classifier,
+    with weights bounded by Rw and data bounded by Rx, is bounded by
+    <= Rw^2*Rx^2/gamma^2. Hence, normalizing the fat-shattering dimension
+    of a model with unbounded weights compares it to the best linear classifier
+    with the same weight norm.
+
     Args:
         weights (Tensor): Tensor of weights
         gamma (float): Margin parameter.
+        boundx (float): Estimated 2-radius of input data.
 
     Returns:
         float: A positive real-valued normalization constant.
     """
 
-    V = torch.norm(weights, p=1)
-    C = (V / gamma) ** 2 * np.log2(V / gamma)
+    V = torch.norm(weights, p=2)
+    V = V.detach().numpy().item()
+    C = V**2 * Rx**2 / gamma**2
 
-    return C.item()
+    return C

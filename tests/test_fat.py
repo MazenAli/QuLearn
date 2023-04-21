@@ -8,9 +8,10 @@ from qml_mor.optimize import AdamTorch
 
 class TestFunctions(unittest.TestCase):
     def test_normalize_const(self):
-        weights = torch.tensor([1.0, 2.0, 3.0])
+        weights = torch.tensor([1.0, 2.0, 3.0], requires_grad=True)
         gamma = 0.5
-        C = normalize_const(weights, gamma)
+        sizex = 3
+        C = normalize_const(weights, gamma, sizex)
         self.assertIsInstance(C, float)
         self.assertGreater(C, 0.0)
 

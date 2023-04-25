@@ -17,7 +17,7 @@ def main():
             "num_samples": 2,
             "opt_steps": 300,
             "opt_stop": 1e-16,
-            "early_stop": True,
+            "early_stop": "",
             "seed": seed,
             "save_dir": save_dir,
         },
@@ -32,9 +32,10 @@ def main():
             "num_samples": 2,
             "opt_steps": 300,
             "opt_stop": 1e-16,
-            "early_stop": True,
+            "early_stop": "",
             "seed": seed,
             "save_dir": save_dir,
+            "cuda": "",
         },
     ]
 

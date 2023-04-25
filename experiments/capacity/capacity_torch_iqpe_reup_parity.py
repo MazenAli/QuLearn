@@ -17,6 +17,9 @@ def parse_args():
     # Read the configuration file
     with open("cfg_capacity.yaml", "r") as f:
         config = yaml.safe_load(f)
+    amsgrad = config.get("amsgrad", False)
+    early_stop = config.get("early_stop", False)
+    cuda = config.get("cuda", False)
 
     parser = argparse.ArgumentParser(
         description="Process arguments for QML-MOR capacity experiments"
@@ -77,8 +80,8 @@ def parse_args():
     )
     parser.add_argument(
         "--amsgrad",
-        type=bool,
-        default=config["amsgrad"],
+        action="store_true",
+        default=amsgrad,
         help="Use amsgrad",
     )
     parser.add_argument(
@@ -95,8 +98,8 @@ def parse_args():
     )
     parser.add_argument(
         "--early_stop",
-        type=bool,
-        default=config["early_stop"],
+        action="store_true",
+        default=early_stop,
         help="Stops iterations early if the previous capacity is at least as large",
     )
     parser.add_argument(
@@ -113,9 +116,9 @@ def parse_args():
     )
     parser.add_argument(
         "--cuda",
-        type=bool,
-        default=config["cuda"],
-        help="Set to true if simulations are run on a GPU",
+        action="store_true",
+        default=cuda,
+        help="Run on a GPU",
     )
     args = parser.parse_args()
     return args
@@ -137,11 +140,11 @@ def main(args):
     if cuda:
         cdevice = torch.device("cuda")
 
-    init_theta = torch.randn(num_reups, num_qubits, requires_grad=True).to(cdevice)
+    init_theta = torch.randn(num_reups, num_qubits, requires_grad=True, device=cdevice)
     theta = torch.randn(
         num_reups, num_layers, num_qubits - 1, 2, requires_grad=True
-    ).to(cdevice)
-    W = torch.randn(2**num_qubits, requires_grad=True).to(cdevice)
+    , device=cdevice)
+    W = torch.randn(2**num_qubits, requires_grad=True, device=cdevice)
     params = [init_theta, theta, W]
 
     qnn_model = IQPEReuploadSU2Parity(params, omega)
@@ -173,6 +176,7 @@ def main(args):
     Nmin = args.Nmin
     Nmax = args.Nmax
     Nstep = args.Nstep
+    early_stop=args.early_stop
 
     start_time = time.time()
     capacities = capacity(
@@ -182,6 +186,7 @@ def main(args):
         Nmin=Nmin,
         Nmax=Nmax,
         Nstep=Nstep,
+        early_stop=early_stop
     )
     end_time = time.time()
     time_taken = end_time - start_time
@@ -197,6 +202,7 @@ def main(args):
 
     results = {
         "date": creation_date,
+        "cdevice": cdevice.type,
         "time_taken": time_taken,
         "num_qubits": args.num_qubits,
         "num_layers": args.num_layers,

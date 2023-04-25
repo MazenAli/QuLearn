@@ -20,7 +20,6 @@ def main():
             "Sr": 3,
             "opt_steps": 300,
             "opt_stop": 1e-16,
-            "early_stop": True,
             "seed": seed,
             "save_dir": save_dir,
         },
@@ -38,9 +37,9 @@ def main():
             "Sr": 3,
             "opt_steps": 300,
             "opt_stop": 1e-16,
-            "early_stop": True,
             "seed": seed,
             "save_dir": save_dir,
+            "cuda": "",
         },
     ]
 

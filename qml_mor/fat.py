@@ -128,7 +128,7 @@ def normalize_const(weights: Tensor, gamma: float, Rx: float) -> float:
     """
 
     V = torch.norm(weights, p=2)
-    V = V.detach().numpy().item()
+    V = V.item()
     C = V**2 * Rx**2 / gamma**2
 
     return C

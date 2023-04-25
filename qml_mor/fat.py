@@ -1,4 +1,9 @@
-from typing import TypeAlias
+# for python < 3.10
+try:
+    from typing import TypeAlias
+except ImportError:
+    from typing_extensions import TypeAlias
+
 import warnings
 import torch
 import pennylane as qml

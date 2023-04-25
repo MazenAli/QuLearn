@@ -167,8 +167,6 @@ def main(args):
     # Define qnode
     shots = None
     qdevice = qml.device("lightning.qubit", wires=args.num_qubits, shots=shots)
-    if cuda:
-        qdevice = qml.device("lightning.gpu", wires=args.num_qubits, shots=shots)
     qnode = qml.QNode(qnn_model.qfunction, qdevice, interface="torch")
 
     # Set optimizer

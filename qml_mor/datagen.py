@@ -1,4 +1,11 @@
 from typing import Optional, TypeVar, Generic, Tuple, Dict, Set, Union
+
+# for python < 3.10
+try:
+    from typing import TypeAlias
+except ImportError:
+    from typing_extensions import TypeAlias
+
 from abc import ABC, abstractmethod
 import torch
 import numpy as np
@@ -6,7 +13,7 @@ from itertools import product
 from scipy.stats import qmc
 
 Tensor = Union[torch.Tensor, np.ndarray]
-Device = torch.device
+Device: TypeAlias = torch.device
 DataOut = Dict[str, Tensor]
 D = TypeVar("D")
 
@@ -18,7 +25,7 @@ class DataGenTorch(ABC, Generic[D]):
     Args:
         seed (int, optional): The seed used to initialize the
             random number generator. Defaults to None.
-        device (torch.device, optional): The device where to run the computations.
+        device (Device, optional): The device where to run the computations.
             Defaults to torch.device("cpu").
     """
 

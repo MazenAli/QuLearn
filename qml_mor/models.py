@@ -1,5 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import List, TypeAlias, TypeVar, Generic
+from typing import List, TypeVar, Generic
+
+# for python < 3.10
+try:
+    from typing import TypeAlias
+except ImportError:
+    from typing_extensions import TypeAlias
+
 import torch
 import pennylane as qml
 

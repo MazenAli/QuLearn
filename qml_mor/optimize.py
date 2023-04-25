@@ -1,4 +1,11 @@
-from typing import TypeAlias, Iterable, Dict, Generic, TypeVar
+from typing import Iterable, Dict, Generic, TypeVar
+
+# for python < 3.10
+try:
+    from typing import TypeAlias
+except ImportError:
+    from typing_extensions import TypeAlias
+
 from abc import ABC, abstractmethod
 import torch
 import pennylane as qml

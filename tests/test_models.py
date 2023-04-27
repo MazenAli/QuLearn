@@ -2,6 +2,7 @@ import unittest
 import torch
 import pennylane as qml
 from qml_mor.models import (
+    LinearModel,
     IQPEReuploadSU2Parity,
     iqpe_reupload_su2_parity,
     sequence_generator,
@@ -71,6 +72,28 @@ class TestIqpeReuploadSu2Parity(unittest.TestCase):
         # Test that the output of iqpe_reupload_su2_parity is a measurement process
         output = iqpe_reupload_su2_parity(X, INIT_THETA, THETA, W)
         self.assertIsInstance(output, qml.measurements.ExpectationMP)
+
+
+class TestLinearModel(unittest.TestCase):
+    def test_output_shape(self):
+        # Test that the output of linear model has the correct shape and type
+        model = LinearModel()
+        sizex = 3
+        X = torch.zeros(sizex)
+        P = [torch.zeros(sizex + 1, requires_grad=True)]
+        output = model(X, P)
+        self.assertIsInstance(output, torch.Tensor)
+        self.assertEqual(output.shape, torch.Size([]))
+
+    def test_raises_value_error(self):
+        # Test that iqpe_reupload_su2_parity raises a ValueError for incorrect
+        # input shapes
+        model = LinearModel()
+        sizex = 3
+        X = torch.zeros(sizex)
+        P = [torch.zeros(sizex, requires_grad=True)]
+        with self.assertRaises(ValueError):
+            model(X, P)
 
 
 class TestSequenceGenerator(unittest.TestCase):

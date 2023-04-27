@@ -1,6 +1,7 @@
 import torch
 import unittest
 
+from qml_mor.models import LinearModel
 from qml_mor.fat import fat_shattering_dim, check_shattering, normalize_const
 from qml_mor.datagen import DataGenFat
 from qml_mor.optimize import AdamTorch
@@ -63,6 +64,30 @@ class TestFunctions(unittest.TestCase):
         )
         self.assertIsInstance(fat_shattering_dimension, int)
         self.assertGreater(fat_shattering_dimension, 0)
+
+    def test_linear_model(self):
+        sizex = 3
+        dmin = 2
+        dmax = 6
+        Sb = 20
+        Sr = 5
+        gamma = 0.1
+
+        datagen = DataGenFat(sizex, Sb, Sr, 2.0 * gamma)
+
+        model = LinearModel()
+
+        loss_fn = torch.nn.MSELoss()
+        params = [torch.zeros(sizex + 1, requires_grad=True)]
+        opt = AdamTorch(params, loss_fn, opt_steps=500, opt_stop=1e-18)
+
+        params = [torch.tensor([1.0, 2.0, 3.0])]
+        fat_shattering_dimension = fat_shattering_dim(
+            model, datagen, opt, dmin, dmax, gamma
+        )
+
+        self.assertIsInstance(fat_shattering_dimension, int)
+        self.assertEqual(fat_shattering_dimension, sizex + 1)
 
 
 if __name__ == "__main__":

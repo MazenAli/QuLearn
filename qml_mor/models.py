@@ -15,6 +15,7 @@ QFuncOutput: TypeAlias = qml.measurements.ExpectationMP
 Observable: TypeAlias = qml.operation.Observable
 X = TypeVar("X")
 P = TypeVar("P")
+Y = TypeVar("Y")
 
 
 class QNNModel(ABC, Generic[X, P]):
@@ -150,6 +151,53 @@ class IQPEReuploadSU2Parity(QNNModel[Tensor, List[Tensor]]):
         """
 
         self.__omega = omega_
+
+
+class Model(ABC, Generic[X, P, Y]):
+    """Abstract base class for regression models f(x, params)."""
+
+    def __init__(self) -> None:
+        pass
+
+    @abstractmethod
+    def __call__(self, x: X, params: P) -> Y:
+        """Abstract method for call."""
+        pass
+
+
+class LinearModel(Model[Tensor, List[Tensor], Tensor]):
+    """
+    Linear regression model
+    f(x, params) = x^T*params[0][0:len(x)] + params[0][len(x)]
+    """
+
+    def __call__(self, x: Tensor, params: List[Tensor]) -> Tensor:
+        """
+        Evaluate linear model for given parameters.
+
+        Args:
+            x (Tensor): feature tensor x.
+            params (List[Tensor]): List of parameter tensors. Should have lenght 1.
+
+        Returns:
+            Tensor: Value of model evaluated at x and params.
+                Computational graph attached.
+
+        Raises:
+            ValueError: If len(x)+1!=len(params[0]).
+        """
+
+        sizex = len(x)
+        sizep = len(params[0])
+
+        if sizex + 1 != sizep:
+            raise ValueError(
+                f"Tensors x with size {sizex} and params[0] with size {sizep} "
+                "should satisfy sizex+1=sizep!"
+            )
+
+        res = torch.sum(x * params[0][0:sizex]) + params[0][sizex]
+        return res
 
 
 def iqpe_reupload_su2_parity(

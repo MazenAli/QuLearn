@@ -2,7 +2,7 @@ import unittest
 from typing import List
 import torch
 import pennylane as qml
-from qml_mor.models import IQPEReuploadSU2Parity
+from qml_mor.models import IQPEReuploadSU2Parity, LinearModel
 from qml_mor.capacity import capacity, fit_rand_labels
 from qml_mor.datagen import DataGenCapacity
 from qml_mor.optimize import AdamTorch
@@ -41,12 +41,32 @@ class TestCapacity(unittest.TestCase):
         opt = AdamTorch(params, loss_fn, opt_steps=20)
 
         C = capacity(qnn_model, datagen, opt, Nmin, Nmax)
-        Cmin = min(C)
-        Cmax = max(C)
 
         self.assertIsInstance(C, List)
-        self.assertLessEqual(Cmax, 100)
-        self.assertGreaterEqual(Cmin, 0)
+        self.assertLessEqual(C[0][3], 100)
+        self.assertGreaterEqual(C[0][3], 0)
+
+    def test_capacity_linear(self):
+        num_samples = 10
+
+        sizex = 3
+
+        Nmin = sizex - 2
+        Nmax = sizex + 2
+
+        datagen = DataGenCapacity(sizex=sizex, num_samples=num_samples)
+
+        params = [torch.zeros(sizex + 1, requires_grad=True)]
+
+        loss_fn = torch.nn.MSELoss()
+        opt = AdamTorch(params, loss_fn, opt_steps=500, opt_stop=1e-18)
+        model = LinearModel()
+        C = capacity(model, datagen, opt, Nmin, Nmax)
+
+        self.assertIsInstance(C, List)
+        self.assertGreaterEqual(C[0][3], 0)
+        self.assertEqual(len(C), 5)
+        self.assertGreater(C[3][3], C[4][3])
 
 
 class TestFitRandLabels(unittest.TestCase):

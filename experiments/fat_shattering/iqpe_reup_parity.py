@@ -8,39 +8,50 @@ import json
 import torch
 import pennylane as qml
 from qml_mor.models import IQPEReuploadSU2Parity
-from qml_mor.capacity import capacity
-from qml_mor.datagen import DataGenCapacity
+from qml_mor.fat import fat_shattering_dim, normalize_const
+from qml_mor.datagen import DataGenFat
 from qml_mor.optimize import AdamTorch
 
 
 def parse_args():
     # Read the configuration file
-    with open("cfg_capacity.yaml", "r") as f:
+    with open("iqpe_reup_parity.yaml", "r") as f:
         config = yaml.safe_load(f)
     amsgrad = config.get("amsgrad", False)
-    early_stop = config.get("early_stop", False)
     cuda = config.get("cuda", False)
 
     parser = argparse.ArgumentParser(
-        description="Process arguments for QML-MOR capacity experiments"
+        description="Process arguments for QML-MOR fat shattering experiments"
     )
     parser.add_argument(
-        "--Nmin",
+        "--dmin",
         type=int,
-        default=config["Nmin"],
-        help="Minimum value of N for experiments",
+        default=config["dmin"],
+        help="Minimum value of d for experiments",
     )
     parser.add_argument(
-        "--Nmax",
+        "--dmax",
         type=int,
-        default=config["Nmax"],
-        help="Maximum value of N for experiments (included)",
+        default=config["dmax"],
+        help="Maximum value of d for experiments (included)",
     )
     parser.add_argument(
-        "--Nstep",
+        "--dstep",
         type=int,
-        default=config["Nstep"],
-        help="Step size for N in experiments",
+        default=config["dstep"],
+        help="Step size for d in experiments",
+    )
+    parser.add_argument(
+        "--gamma",
+        type=float,
+        default=config["gamma"],
+        help="Margin value for fat shattering",
+    )
+    parser.add_argument(
+        "--gamma_fac",
+        type=float,
+        default=config["gamma_fac"],
+        help="Additional multiplicative factor for margin value",
     )
     parser.add_argument(
         "--num_qubits",
@@ -67,10 +78,16 @@ def parse_args():
         help="The exponential feature scaling factor",
     )
     parser.add_argument(
-        "--num_samples",
+        "--Sb",
         type=int,
-        default=config["num_samples"],
-        help="Number of samples for random labels",
+        default=config["Sb"],
+        help="Number of binary samples to check shattering",
+    )
+    parser.add_argument(
+        "--Sr",
+        type=int,
+        default=config["Sr"],
+        help="number of level offset samples to check shattering",
     )
     parser.add_argument(
         "--lr",
@@ -95,12 +112,6 @@ def parse_args():
         type=float,
         default=config["opt_stop"],
         help="Convergence threshold for optimization",
-    )
-    parser.add_argument(
-        "--early_stop",
-        action="store_true",
-        default=early_stop,
-        help="Stops iterations early if the previous capacity is at least as large",
     )
     parser.add_argument(
         "--seed",
@@ -142,8 +153,8 @@ def main(args):
 
     init_theta = torch.randn(num_reups, num_qubits, requires_grad=True, device=cdevice)
     theta = torch.randn(
-        num_reups, num_layers, num_qubits - 1, 2, requires_grad=True
-    , device=cdevice)
+        num_reups, num_layers, num_qubits - 1, 2, requires_grad=True, device=cdevice
+    )
     W = torch.randn(2**num_qubits, requires_grad=True, device=cdevice)
     params = [init_theta, theta, W]
 
@@ -167,26 +178,28 @@ def main(args):
 
     # Set data generating method
     sizex = num_qubits
-    num_samples = args.num_samples
-    datagen = DataGenCapacity(
-        sizex=sizex, num_samples=num_samples, seed=seed, device=cdevice
+    Sb = args.Sb
+    Sr = args.Sr
+    gamma = args.gamma
+    gamma_fac = args.gamma_fac
+    datagen = DataGenFat(
+        sizex=sizex, Sb=Sb, Sr=Sr, gamma=gamma_fac * gamma, seed=seed, device=cdevice
     )
 
     # Estimate capacity
-    Nmin = args.Nmin
-    Nmax = args.Nmax
-    Nstep = args.Nstep
-    early_stop=args.early_stop
+    dmin = args.dmin
+    dmax = args.dmax
+    dstep = args.dstep
 
     start_time = time.time()
-    capacities = capacity(
+    fat_dim = fat_shattering_dim(
         model=qnode,
         datagen=datagen,
         opt=opt,
-        Nmin=Nmin,
-        Nmax=Nmax,
-        Nstep=Nstep,
-        early_stop=early_stop
+        dmin=dmin,
+        dmax=dmax,
+        gamma=gamma,
+        dstep=dstep,
     )
     end_time = time.time()
     time_taken = end_time - start_time
@@ -200,25 +213,31 @@ def main(args):
     num_params_obs = torch.numel(W)
     num_params = num_params_gates + num_params_obs
 
+    norm = normalize_const(weights=W, gamma=gamma, Rx=sizex)
+
     results = {
         "date": creation_date,
-        "cdevice": cdevice.type,
         "time_taken": time_taken,
+        "cdevice": cdevice.type,
         "num_qubits": args.num_qubits,
         "num_layers": args.num_layers,
         "num_reups": args.num_reups,
         "omega": omega,
-        "Nmin": Nmin,
-        "Nmax": Nmax,
-        "Nstep": Nstep,
+        "dmin": dmin,
+        "dmax": dmax,
+        "dstep": dstep,
+        "gamma": gamma,
+        "gamma_fac": gamma_fac,
         "num_params_gates": num_params_gates,
         "num_params_obs": num_params_obs,
         "num_params": num_params,
-        "num_samples": num_samples,
+        "Sb": Sb,
+        "Sr": Sr,
         "opt_steps": args.opt_steps,
         "opt_stop": args.opt_stop,
         "seed": seed,
-        "capacities": capacities,
+        "fat_dim": fat_dim,
+        "fat_dim_norm": fat_dim / norm,
     }
     exp_id = str(uuid.uuid4())
     direc = args.save_dir

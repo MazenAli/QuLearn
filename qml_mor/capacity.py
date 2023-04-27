@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 # for python < 3.10
 try:
@@ -18,6 +18,7 @@ Tensor: TypeAlias = torch.Tensor
 Model: TypeAlias = qml.QNode
 Datagen: TypeAlias = DataGenCapacity
 Opt: TypeAlias = Optimizer
+Capacity = List[Tuple[int, float, int, int]]
 
 
 def capacity(
@@ -28,7 +29,7 @@ def capacity(
     Nmax: int,
     Nstep: int = 1,
     early_stop: bool = True,
-) -> List[int]:
+) -> Capacity:
     """
     Estimates the memory capacity of a model over a range of values of N.
     See arXiv:1908.01364.
@@ -44,7 +45,7 @@ def capacity(
             capacity at least as large. Defaults to True.
 
     Returns:
-        List[int]: List of capacities over the range of N.
+        Capacity: List of tuples (N, mre=2^(-m), m, N*m).
     """
 
     capacities = []
@@ -53,11 +54,13 @@ def capacity(
         mre = fit_rand_labels(model, datagen, opt, N)
         m = max(int(np.log2(1.0 / mre)), 0)
         C = N * m
-        capacities.append(C)
+
+        capacities.append((N, mre, m, C))
 
         if C <= Cprev and N != Nmax and early_stop:
             warnings.warn("Stopping early, capacity not improving.")
             break
+        Cprev = C
 
     return capacities
 

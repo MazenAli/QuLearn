@@ -3,7 +3,7 @@ import subprocess
 
 def main():
     # Define different input values
-    save_dir = "./results/torch_iqpe_reup_parity"
+    save_dir = "./results/iqpe_reup_parity"
     seed = 0
     input_sets = [
         {
@@ -48,7 +48,7 @@ def main():
         cmd_args = " ".join([f"--{key} {value}" for key, value in input_set.items()])
 
         # Run the script with the input set
-        script = "fat_torch_iqpe_reup_parity.py"
+        script = "iqpe_reup_parity.py"
         subprocess.run(f"python {script} {cmd_args}", shell=True, check=True)
 
 

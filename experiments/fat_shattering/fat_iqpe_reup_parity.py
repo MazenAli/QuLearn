@@ -15,7 +15,7 @@ from qml_mor.optimize import AdamTorch
 
 def parse_args():
     # Read the configuration file
-    with open("iqpe_reup_parity.yaml", "r") as f:
+    with open("fat_iqpe_reup_parity.yaml", "r") as f:
         config = yaml.safe_load(f)
     amsgrad = config.get("amsgrad", False)
     cuda = config.get("cuda", False)
@@ -114,6 +114,18 @@ def parse_args():
         help="Convergence threshold for optimization",
     )
     parser.add_argument(
+        "--stagnation_threshold",
+        type=float,
+        default=config["stagnation_threshold"],
+        help="Stop if relative loss reduction below threshold",
+    )
+    parser.add_argument(
+        "--stagnation_count",
+        type=int,
+        default=config["stagnation_count"],
+        help="Allowed times below threshold",
+    )
+    parser.add_argument(
         "--seed",
         type=int,
         default=config["seed"],
@@ -174,6 +186,8 @@ def main(args):
         amsgrad=args.amsgrad,
         opt_steps=args.opt_steps,
         opt_stop=args.opt_stop,
+        stagnation_threshold=args.stagnation_threshold,
+        stagnation_count=args.stagnation_count,
     )
 
     # Set data generating method

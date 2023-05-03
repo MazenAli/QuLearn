@@ -15,7 +15,7 @@ from qml_mor.optimize import AdamTorch
 
 def parse_args():
     # Read the configuration file
-    with open("iqpe_reup_parity.yaml", "r") as f:
+    with open("cap_iqpe_reup_parity.yaml", "r") as f:
         config = yaml.safe_load(f)
     amsgrad = config.get("amsgrad", False)
     early_stop = config.get("early_stop", False)
@@ -97,10 +97,28 @@ def parse_args():
         help="Convergence threshold for optimization",
     )
     parser.add_argument(
+        "--stagnation_threshold",
+        type=float,
+        default=config["stagnation_threshold"],
+        help="Stop if relative loss reduction below threshold",
+    )
+    parser.add_argument(
+        "--stagnation_count",
+        type=int,
+        default=config["stagnation_count"],
+        help="Allowed times below threshold",
+    )
+    parser.add_argument(
         "--early_stop",
         action="store_true",
         default=early_stop,
         help="Stops iterations early if the previous capacity is at least as large",
+    )
+    parser.add_argument(
+        "--stop_count",
+        type=int,
+        default=config["stop_count"],
+        help="Allowed times capacity not improving",
     )
     parser.add_argument(
         "--seed",
@@ -151,7 +169,7 @@ def main(args):
 
     # Define qnode
     shots = None
-    qdevice = qml.device("lightning.qubit", wires=args.num_qubits, shots=shots)
+    qdevice = qml.device("default.qubit", wires=args.num_qubits, shots=shots)
     qnode = qml.QNode(qnn_model.qfunction, qdevice, interface="torch")
 
     # Set optimizer
@@ -163,6 +181,8 @@ def main(args):
         amsgrad=args.amsgrad,
         opt_steps=args.opt_steps,
         opt_stop=args.opt_stop,
+        stagnation_threshold=args.stagnation_threshold,
+        stagnation_count=args.stagnation_count,
     )
 
     # Set data generating method
@@ -177,6 +197,7 @@ def main(args):
     Nmax = args.Nmax
     Nstep = args.Nstep
     early_stop = args.early_stop
+    stop_count = args.stop_count
 
     start_time = time.time()
     capacities = capacity(
@@ -187,6 +208,7 @@ def main(args):
         Nmax=Nmax,
         Nstep=Nstep,
         early_stop=early_stop,
+        stop_count=stop_count,
     )
     end_time = time.time()
     time_taken = end_time - start_time

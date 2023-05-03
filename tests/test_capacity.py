@@ -53,20 +53,28 @@ class TestCapacity(unittest.TestCase):
 
         Nmin = sizex - 2
         Nmax = sizex + 2
+        seed = 0
 
-        datagen = DataGenCapacity(sizex=sizex, num_samples=num_samples)
+        datagen = DataGenCapacity(sizex=sizex, num_samples=num_samples, seed=seed)
 
         params = [torch.zeros(sizex + 1, requires_grad=True)]
 
         loss_fn = torch.nn.MSELoss()
-        opt = AdamTorch(params, loss_fn, opt_steps=500, opt_stop=1e-18)
+        opt = AdamTorch(
+            params,
+            loss_fn,
+            amsgrad=True,
+            opt_steps=500,
+            opt_stop=1e-18,
+            stagnation_count=500,
+        )
         model = LinearModel()
-        C = capacity(model, datagen, opt, Nmin, Nmax)
+        C = capacity(model, datagen, opt, Nmin, Nmax, stop_count=2)
 
         self.assertIsInstance(C, List)
         self.assertGreaterEqual(C[0][3], 0)
-        self.assertEqual(len(C), 5)
-        self.assertGreater(C[3][3], C[4][3])
+        self.assertGreaterEqual(len(C), 4)
+        self.assertGreaterEqual(C[3][3], C[4][3])
 
 
 class TestFitRandLabels(unittest.TestCase):

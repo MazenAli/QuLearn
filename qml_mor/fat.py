@@ -52,6 +52,7 @@ def fat_shattering_dim(
         if not shattered:
             if d == dmin:
                 warnings.warn(f"Stopped at dmin = {dmin}.")
+                return 0
 
             return d - 1
 

@@ -68,7 +68,6 @@ class IQPEReuploadSU2Parity(QNNModel[Tensor, List[Tensor]]):
         if len(params) != 3:
             raise ValueError("Parameters must be a list of 3 tensors")
 
-        self.__params = None
         self.__init_theta = params[0]
         self.__theta = params[1]
         self.__W = params[2]

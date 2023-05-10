@@ -13,7 +13,7 @@ opt_stop: 1e-16
 stagnation_threshold: 0.01
 stagnation_count: 100
 early_stop: true
-stop_count: 2
+stop_count: 1
 seed: 0
 save_dir: "./results/torch_iqpe_reup_parity"
 cuda: false

@@ -25,7 +25,7 @@ class TestTrainAdam(unittest.TestCase):
         params = [INIT_THETA, THETA, W]
 
         # Model
-        model = IQPEReuploadSU2Parity(params)
+        model = IQPEReuploadSU2Parity()
         dev = qml.device("default.qubit", wires=NUM_QUBITS, shots=None)
 
         @qml.qnode(dev, interface="torch")

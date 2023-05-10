@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, TypeVar, Generic
+import math
 
 # for python < 3.10
 try:
@@ -33,45 +34,18 @@ class QNNModel(ABC, Generic[X, P]):
         """Constructs a circuit for a given input and parameters."""
         return self.qfunction(x, params)
 
-    @property
-    @abstractmethod
-    def params(self) -> P:
-        """Abstract property for the model parameters."""
-        pass
-
-    @params.setter
-    @abstractmethod
-    def params(self, params_: P) -> None:
-        """Abstract setter for the model parameters."""
-        pass
-
 
 class IQPEReuploadSU2Parity(QNNModel[Tensor, List[Tensor]]):
     """
     An IQP embedding circuit with additional SU(2) gates and parity measurements.
 
     Args:
-        params (List[Tensor]): The initial parameters of the circuit. Must be a list of
-            three tensors: the initial thetas, the main thetas, and the weights W.
         omega (float, optional): The exponential feature scaling factor.
             Defaults to 0.0.
     """
 
-    def __init__(self, params: List[Tensor], omega: float = 0.0) -> None:
-        """
-        Initializes the IQPE + SU(2) circuit.
-
-        Raises:
-            ValueError: If the length of params is not 3.
-        """
-
-        if len(params) != 3:
-            raise ValueError("Parameters must be a list of 3 tensors")
-
-        self.__init_theta = params[0]
-        self.__theta = params[1]
-        self.__W = params[2]
-        self.__omega = omega
+    def __init__(self, omega: float = 0.0) -> None:
+        self.omega = omega
 
     def qfunction(self, x: Tensor, params: List[Tensor]) -> QFuncOutput:
         """
@@ -95,61 +69,41 @@ class IQPEReuploadSU2Parity(QNNModel[Tensor, List[Tensor]]):
 
         init_theta = params[0]
         theta = params[1]
-        W = params[2]
+        H = self.Hamiltonian(params)
 
-        return iqpe_reupload_su2_parity(x, init_theta, theta, W, self.omega)
+        return iqpe_reupload_su2(x, init_theta, theta, H, self.omega)
 
-    @property
-    def params(self) -> List[Tensor]:
+    def Hamiltonian(self, params: List[Tensor]) -> Observable:
         """
-        Returns the current parameters of the circuit.
-
-        Returns:
-            List[Tensor]: The current parameters of the circuit.
-        """
-
-        return [self.__init_theta, self.__theta, self.__W]
-
-    @params.setter
-    def params(self, params_: List[Tensor]) -> None:
-        """
-        Sets the parameters of the circuit.
+        Hamiltonian corresponding to the parity of Pauli Z operators.
 
         Args:
-            params_ (List[Tensor]): The new parameters for the circuit.
+            params (List[Tensor]): The parameters for the circuit. Must be a list of
+                three tensors: the initial thetas, the main thetas, and the weights W.
+
+        Returns:
+            Observable: Observable corresponding to the parity of Pauli Z operators
 
         Raises:
-            ValueError: If the length of params_ is not 3.
+            ValueError: If shape of params or W incorrect.
         """
 
-        if len(params_) != 3:
+        if len(params) != 3:
             raise ValueError("Parameters must be a list of 3 tensors")
 
-        self.__init_theta = params_[0]
-        self.__theta = params_[1]
-        self.__W = params_[2]
+        W = params[2]
+        shapeW = W.shape
+        if len(shapeW) != 1:
+            raise ValueError(f"W (shape={shapeW}) must be a 1-dim tensor")
 
-    @property
-    def omega(self) -> float:
-        """
-        Returns the current exponential feature scaling factor.
+        num_qubits = math.log2(len(W))
+        if not num_qubits.is_integer():
+            raise ValueError(f"Length of W ({num_qubits}) not a power of 2")
+        num_qubits = int(num_qubits)
 
-        Returns:
-            float: The current exponential feature scaling factor.
-        """
+        H = parity_hamiltonian(num_qubits, W)
 
-        return self.__omega
-
-    @omega.setter
-    def omega(self, omega_: float) -> None:
-        """
-        Sets the exponential feature scaling factor.
-
-        Args:
-            omega_ (float): The new exponential feature scaling factor.
-        """
-
-        self.__omega = omega_
+        return H
 
 
 class Model(ABC, Generic[X, P, Y]):
@@ -199,37 +153,95 @@ class LinearModel(Model[Tensor, List[Tensor], Tensor]):
         return res
 
 
-def iqpe_reupload_su2_parity(
-    x: Tensor, init_theta: Tensor, theta: Tensor, W: Tensor, omega: float = 0.0
+def parity_hamiltonian(num_qubits: int, W: Tensor) -> Observable:
+    """
+    Hamiltonian corresponding to the parity of Pauli Z operators.
+
+    Args:
+        num_qubits (int): Number of qubits.
+        W (Tensor): Observable weights of shape (2^num_qubits,)
+
+    Returns:
+        Observable: Observable corresponding to the parity of Pauli Z operators
+
+    Raises:
+        ValueError: If shape of W is not as specified above.
+    """
+
+    shapeW = W.shape
+    if len(shapeW) != 1:
+        raise ValueError(f"W (shape={shapeW}) must be a 1-dim tensor")
+
+    W_qubits = math.log2(len(W))
+    if not W_qubits.is_integer():
+        raise ValueError(f"Length of W ({W_qubits}) not a power of 2")
+
+    if int(W_qubits) != num_qubits:
+        raise ValueError(f"num_qubits and W (shape={shapeW}) do not match")
+
+    obs = parities(num_qubits)
+    H = qml.Hamiltonian(W, obs)
+
+    return H
+
+
+def iqpe_reupload_su2(
+    x: Tensor, init_theta: Tensor, theta: Tensor, H: Observable, omega: float = 0.0
 ) -> QFuncOutput:
     """
     Quantum function that calculates the expectation value
-    of the parity of Pauli Z operators.
+    of a Hamiltonian H in the state defined by x and theta.
 
     Args:
         x (Tensor): Input tensor of shape (num_qubits,)
         init_theta (Tensor): Initial rotation angles for each qubit,
             of shape (reps, num_qubits)
         theta (Tensor): Rotation angles for each layer and each qubit,
-            of shape (reps, num_qubits, 3)
-        W (Tensor): Interaction weights of shape (num_qubits, num_qubits)
+            of shape (reps, num_layers, num_qubits-1, 2)
+        W (Tensor): Observable weights of shape (2^num_qubits,)
         omega (float, optional): Exponential feature scaling factor. Defaults to 0.0.
 
     Returns:
         QFuncOutput: Expectation value of the parity of Pauli Z operators
+
+    Raises:
+        ValueError: If any of the tensors does not have shape as specified above.
     """
 
+    shape_x = x.shape
     shape_init = init_theta.shape
     shape = theta.shape
+    if len(shape_x) != 1:
+        raise ValueError(f"x (shape={shape_x}) must be a 1-dim tensor")
     if len(shape_init) != 2:
-        raise ValueError("Initial theta must be a 2-dim tensor")
+        raise ValueError(f"init_theta (shape={shape_init}) must be a 2-dim tensor")
     if len(shape) != 4:
-        raise ValueError("Theta must be a 4-dim tensor")
+        raise ValueError(f"theta (shape={shape}) must be a 4-dim tensor")
+    if shape[3] != 2:
+        raise ValueError(f"Last dimension of theta {shape[3]} should be 2")
 
     num_qubits = len(x)
-    reps = shape_init[0]
-    wires = range(num_qubits)
+    init_qubits = shape_init[1]
+    theta_qubits = shape[2]
+    if num_qubits != init_qubits:
+        raise ValueError(
+            f"num_qubits in x (shape={shape_x}) and "
+            f"init_theta (shape={shape_init}) do not match"
+        )
+    if num_qubits != theta_qubits + 1:
+        raise ValueError(
+            f"num_qubits in x (shape={x.shape}) and "
+            f"theta (shape={shape}) do not match"
+        )
 
+    reps = shape_init[0]
+    reps_theta = shape[0]
+    if reps != reps_theta:
+        raise ValueError(
+            f"reps in init_theta ({reps}) does not match reps in theta ({reps_theta})"
+        )
+
+    wires = range(num_qubits)
     for layer in range(reps):
         features = 2 ** (omega * layer) * x
         initial_layer_weights = init_theta[layer]
@@ -241,9 +253,6 @@ def iqpe_reupload_su2_parity(
             weights=weights,
             wires=wires,
         )
-
-    obs = parities(num_qubits)
-    H = qml.Hamiltonian(W, obs)
 
     return qml.expval(H)
 

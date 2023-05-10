@@ -30,7 +30,7 @@ class TestCapacity(unittest.TestCase):
 
         params = [init_theta, theta, W]
 
-        model = IQPEReuploadSU2Parity(params, omega)
+        model = IQPEReuploadSU2Parity(omega)
         dev = qml.device("default.qubit", wires=num_qubits, shots=None)
 
         @qml.qnode(dev, interface="torch")
@@ -97,7 +97,7 @@ class TestFitRandLabels(unittest.TestCase):
 
         params = [init_theta, theta, W]
 
-        model = IQPEReuploadSU2Parity(params, omega)
+        model = IQPEReuploadSU2Parity(omega)
         dev = qml.device("default.qubit", wires=num_qubits, shots=None)
 
         @qml.qnode(dev, interface="torch")

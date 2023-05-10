@@ -165,7 +165,7 @@ def main(args):
     W = torch.randn(2**num_qubits, requires_grad=True, device=cdevice)
     params = [init_theta, theta, W]
 
-    qnn_model = IQPEReuploadSU2Parity(params, omega)
+    qnn_model = IQPEReuploadSU2Parity(omega)
 
     # Define qnode
     shots = None

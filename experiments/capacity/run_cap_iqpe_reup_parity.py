@@ -7,8 +7,8 @@ def main():
     seed = 0
     input_sets = [
         {
-            "Nmin": 10,
-            "Nmax": 10,
+            "Nmin": 2,
+            "Nmax": 2,
             "Nstep": 1,
             "num_qubits": 3,
             "num_reups": 1,
@@ -20,7 +20,7 @@ def main():
             "stagnation_threshold": 0.01,
             "stagnation_count": 100,
             "early_stop": "",
-            "stop_count": 2,
+            "stop_count": 1,
             "seed": seed,
             "save_dir": save_dir,
         },

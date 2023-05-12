@@ -5,7 +5,9 @@ from qml_mor.models import (
     LinearModel,
     IQPEReuploadSU2Parity,
     parity_hamiltonian,
-    iqpe_reupload_su2,
+    iqpe_reupload_su2_circuit,
+    iqpe_reupload_su2_expectation,
+    iqpe_reupload_su2_probs,
     sequence_generator,
     parities,
 )
@@ -33,6 +35,12 @@ class TestIQPEReuploadSU2Parity(unittest.TestCase):
         output = model.qfunction(X, [INIT_THETA, THETA, W])
         self.assertIsInstance(output, qml.measurements.ExpectationMP)
 
+    def test_probs(self):
+        # Test that the qfunction returns a PennyLane Probability object
+        model = IQPEReuploadSU2Parity()
+        output = model.probabilities(X, [INIT_THETA, THETA, W])
+        self.assertIsInstance(output, qml.measurements.ProbabilityMP)
+
     def test_qfunction_output(self):
         # Test that the qfunction is equal to 8 on a trivial zero input
         model = IQPEReuploadSU2Parity()
@@ -45,6 +53,18 @@ class TestIQPEReuploadSU2Parity(unittest.TestCase):
         output = circuit(X, [INIT_THETA, THETA, W]).item()
         self.assertAlmostEqual(output, 8.0)
 
+    def test_probs_output(self):
+        # Test that the qfunction is equal to 8 on a trivial zero input
+        model = IQPEReuploadSU2Parity()
+        dev = qml.device("default.qubit", wires=NUM_QUBITS, shots=None)
+
+        @qml.qnode(dev, interface="torch")
+        def circuit(x, params):
+            return model.probabilities(x, params)
+
+        output = circuit(X, [INIT_THETA, THETA, W])
+        self.assertAlmostEqual(output[0].item(), 1.0)
+
 
 class TestIqpeReuploadSu2Parity(unittest.TestCase):
     def test_error(self):
@@ -55,7 +75,7 @@ class TestIqpeReuploadSu2Parity(unittest.TestCase):
     def test_output_shape(self):
         # Test that the output of iqpe_reupload_su2 has the correct shape
         H = parity_hamiltonian(len(X), W)
-        output = iqpe_reupload_su2(X, INIT_THETA, THETA, H)
+        output = iqpe_reupload_su2_expectation(X, INIT_THETA, THETA, H)
         self.assertEqual(output.shape(), (1,))
 
     def test_raises_value_error(self):
@@ -63,13 +83,18 @@ class TestIqpeReuploadSu2Parity(unittest.TestCase):
         # input shapes
         H = parity_hamiltonian(len(X), W)
         with self.assertRaises(ValueError):
-            iqpe_reupload_su2(X, INIT_THETA, torch.ones((2, NUM_QUBITS, 4)), H)
+            iqpe_reupload_su2_circuit(X, INIT_THETA, torch.ones((2, NUM_QUBITS, 4)), H)
 
     def test_output_type(self):
         H = parity_hamiltonian(len(X), W)
         # Test that the output of iqpe_reupload_su2_parity is a measurement process
-        output = iqpe_reupload_su2(X, INIT_THETA, THETA, H)
+        output = iqpe_reupload_su2_expectation(X, INIT_THETA, THETA, H)
         self.assertIsInstance(output, qml.measurements.ExpectationMP)
+
+    def test_output_probs_type(self):
+        # Test that the output of iqpe_reupload_su2_parity is a probability process
+        output = iqpe_reupload_su2_probs(X, INIT_THETA, THETA)
+        self.assertIsInstance(output, qml.measurements.ProbabilityMP)
 
 
 class TestLinearModel(unittest.TestCase):

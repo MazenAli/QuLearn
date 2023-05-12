@@ -12,30 +12,38 @@ import torch
 import pennylane as qml
 
 Tensor: TypeAlias = torch.Tensor
-QFuncOutput: TypeAlias = qml.measurements.ExpectationMP
+Expectation: TypeAlias = qml.measurements.ExpectationMP
 Observable: TypeAlias = qml.operation.Observable
+Probability: TypeAlias = qml.measurements.ProbabilityMP
 X = TypeVar("X")
 P = TypeVar("P")
 Y = TypeVar("Y")
+E = TypeVar("E")
+Pr = TypeVar("Pr")
 
 
-class QNNModel(ABC, Generic[X, P]):
+class QNNModel(ABC, Generic[X, P, E, Pr]):
     """Abstract base class for a quantum neural network model."""
 
     def __init__(self) -> None:
         pass
 
     @abstractmethod
-    def qfunction(self, x: X, params: P) -> QFuncOutput:
-        """Abstract method for the quantum function."""
+    def expectation(self, x: X, params: P) -> E:
+        """Constructs an expectation object for a given input and parameters."""
         pass
 
-    def circuit(self, x: X, params: P) -> QFuncOutput:
+    def qfunction(self, x: X, params: P) -> E:
+        """By default, the quantum function is the expectation process."""
+        return self.expectation(x, params)
+
+    @abstractmethod
+    def probabilities(self, x: X, params: P) -> Pr:
         """Constructs a circuit for a given input and parameters."""
-        return self.qfunction(x, params)
+        return self.probabilities(x, params)
 
 
-class IQPEReuploadSU2Parity(QNNModel[Tensor, List[Tensor]]):
+class IQPEReuploadSU2Parity(QNNModel[Tensor, List[Tensor], Expectation, Probability]):
     """
     An IQP embedding circuit with additional SU(2) gates and parity measurements.
 
@@ -47,18 +55,18 @@ class IQPEReuploadSU2Parity(QNNModel[Tensor, List[Tensor]]):
     def __init__(self, omega: float = 0.0) -> None:
         self.omega = omega
 
-    def qfunction(self, x: Tensor, params: List[Tensor]) -> QFuncOutput:
+    def expectation(self, x: Tensor, params: List[Tensor]) -> Expectation:
         """
         Returns the expectation value circuit of the Hamiltonian of the circuit given
         the input features and the parameters.
 
         Args:
-            x (Tensor): The input features for the circuit of dimension (sizex,).
+            x (Tensor): The input features for the circuit of dimension (num_qubits,).
             params (List[Tensor]): The parameters for the circuit. Must be a list of
                 three tensors: the initial thetas, the main thetas, and the weights W.
 
         Returns:
-            QFuncOutput: The expectation value of the Hamiltonian of the circuit.
+            Expectation: The expectation value of the Hamiltonian of the circuit.
 
         Raises:
             ValueError: If the length of params is not 3.
@@ -71,7 +79,32 @@ class IQPEReuploadSU2Parity(QNNModel[Tensor, List[Tensor]]):
         theta = params[1]
         H = self.Hamiltonian(params)
 
-        return iqpe_reupload_su2(x, init_theta, theta, H, self.omega)
+        return iqpe_reupload_su2_expectation(x, init_theta, theta, H, self.omega)
+
+    def probabilities(self, x: Tensor, params: List[Tensor]) -> Probability:
+        """
+        Returns the probabilities of measurements for the circuit given
+        the input features and the parameters.
+
+        Args:
+            x (Tensor): The input features for the circuit of dimension (num_qubits,).
+            params (List[Tensor]): The parameters for the circuit. Must be a list of
+                three tensors: the initial thetas, the main thetas, and the weights W.
+
+        Returns:
+            Probability: The measurement probabilities of the circuit.
+
+        Raises:
+            ValueError: If the length of params is not at least 2.
+        """
+
+        if len(params) <= 2:
+            raise ValueError("Parameters must be a list of at least 2 tensors")
+
+        init_theta = params[0]
+        theta = params[1]
+
+        return iqpe_reupload_su2_probs(x, init_theta, theta, self.omega)
 
     def Hamiltonian(self, params: List[Tensor]) -> Observable:
         """
@@ -185,24 +218,25 @@ def parity_hamiltonian(num_qubits: int, W: Tensor) -> Observable:
     return H
 
 
-def iqpe_reupload_su2(
-    x: Tensor, init_theta: Tensor, theta: Tensor, H: Observable, omega: float = 0.0
-) -> QFuncOutput:
+def iqpe_reupload_su2_circuit(
+    x: Tensor,
+    init_theta: Tensor,
+    theta: Tensor,
+    omega: float = 0.0,
+) -> None:
     """
-    Quantum function that calculates the expectation value
-    of a Hamiltonian H in the state defined by x and theta.
+    Quantum function that prepares QNN circuit defined by x and theta.
 
     Args:
-        x (Tensor): Input tensor of shape (num_qubits,)
+        x (Tensor): Input tensor of shape (num_qubits,).
         init_theta (Tensor): Initial rotation angles for each qubit,
-            of shape (reps, num_qubits)
+            of shape (reps, num_qubits).
         theta (Tensor): Rotation angles for each layer and each qubit,
-            of shape (reps, num_layers, num_qubits-1, 2)
-        W (Tensor): Observable weights of shape (2^num_qubits,)
+            of shape (reps, num_layers, num_qubits-1, 2).
         omega (float, optional): Exponential feature scaling factor. Defaults to 0.0.
 
     Returns:
-        QFuncOutput: Expectation value of the parity of Pauli Z operators
+        None: Expectation value of the parity of Pauli Z operators
 
     Raises:
         ValueError: If any of the tensors does not have shape as specified above.
@@ -254,7 +288,59 @@ def iqpe_reupload_su2(
             wires=wires,
         )
 
+
+def iqpe_reupload_su2_expectation(
+    x: Tensor,
+    init_theta: Tensor,
+    theta: Tensor,
+    H: Observable,
+    omega: float = 0.0,
+) -> Expectation:
+    """
+    Quantum function that calculates the expectation value
+    of a Hamiltonian H in the state defined by x and theta.
+
+    Args:
+        x (Tensor): Input tensor of shape (num_qubits,).
+        init_theta (Tensor): Initial rotation angles for each qubit,
+            of shape (reps, num_qubits).
+        theta (Tensor): Rotation angles for each layer and each qubit,
+            of shape (reps, num_layers, num_qubits-1, 2).
+        H (Observable): Hamiltonian.
+        omega (float, optional): Exponential feature scaling factor. Defaults to 0.0.
+
+    Returns:
+        Expectation: Expectation value of the parity of Pauli Z operators
+    """
+
+    iqpe_reupload_su2_circuit(x, init_theta, theta, omega)
     return qml.expval(H)
+
+
+def iqpe_reupload_su2_probs(
+    x: Tensor,
+    init_theta: Tensor,
+    theta: Tensor,
+    omega: float = 0.0,
+) -> Probability:
+    """
+    Quantum function that calculates the measurement probabilities
+    in the state defined by x and theta.
+
+    Args:
+        x (Tensor): Input tensor of shape (num_qubits,).
+        init_theta (Tensor): Initial rotation angles for each qubit,
+            of shape (reps, num_qubits).
+        theta (Tensor): Rotation angles for each layer and each qubit,
+            of shape (reps, num_layers, num_qubits-1, 2).
+        omega (float, optional): Exponential feature scaling factor. Defaults to 0.0.
+
+    Returns:
+        Probability: Measurement probabilities.
+    """
+
+    iqpe_reupload_su2_circuit(x, init_theta, theta, omega)
+    return qml.probs()
 
 
 def sequence_generator(n: int) -> List[List[int]]:

@@ -10,7 +10,11 @@ from qml_mor.models import (
     iqpe_reupload_su2_probs,
     sequence_generator,
     parities,
+    parities_outcome,
+    parities_outcome_probs,
 )
+from qml_mor.utils import probabilities_to_dictionary, samples_to_dictionary
+
 
 # Set up global constants for testing
 NUM_QUBITS = 3
@@ -64,6 +68,58 @@ class TestIQPEReuploadSU2Parity(unittest.TestCase):
 
         output = circuit(X, [INIT_THETA, THETA, W])
         self.assertAlmostEqual(output[0].item(), 1.0)
+
+    def test_probs_outcome(self):
+        # Test that the qfunction is equal to 8 on a trivial zero input
+        model = IQPEReuploadSU2Parity()
+        dev = qml.device("default.qubit", wires=NUM_QUBITS, shots=None)
+
+        @qml.qnode(dev, interface="torch")
+        def circuit(x, params):
+            return model.probabilities(x, params)
+
+        params = [INIT_THETA, THETA, W]
+        probs = circuit(X, params)
+        prob_dic = probabilities_to_dictionary(probs)
+
+        outcome = model.outcome_probs(prob_dic, params)
+        E = 0.0
+        for val, p in outcome.items():
+            E += val * p
+
+        @qml.qnode(dev, interface="torch")
+        def circuit(x, params):
+            return model.expectation(x, params)
+
+        expec = circuit(X, params)
+
+        self.assertAlmostEqual(expec.item(), E.item())
+
+    def test_samples_outcome(self):
+        # Test that the qfunction is equal to 8 on a trivial zero input
+        model = IQPEReuploadSU2Parity()
+        shots = 10
+        dev = qml.device("default.qubit", wires=NUM_QUBITS, shots=shots)
+
+        @qml.qnode(dev, interface="torch")
+        def circuit(x, params):
+            return model.sample(x, params)
+
+        params = [INIT_THETA, THETA, W]
+        probs = circuit(X, params)
+        prob_dic = samples_to_dictionary(probs)
+
+        outcome = model.outcome_probs(prob_dic, params)
+        E = 0.0
+        for val, p in outcome.items():
+            E += val * p
+
+        @qml.qnode(dev, interface="torch", shots=shots)
+        def circuit(x, params):
+            return model.expectation(x, params)
+
+        expec = circuit(X, params)
+        self.assertAlmostEqual(expec.item(), E.item())
 
 
 class TestIqpeReuploadSu2Parity(unittest.TestCase):
@@ -145,6 +201,35 @@ class TestParities(unittest.TestCase):
         observables = parities(NUM_QUBITS)
         for obs in observables:
             self.assertIsInstance(obs, qml.operation.Observable)
+
+
+class TestParitiesOutcome(unittest.TestCase):
+    def test_parities_outcome(self):
+        bitstring = "0101"
+        H = [qml.PauliZ(0) @ qml.PauliZ(2), qml.Identity(1), qml.Identity(3)]
+        H = qml.Hamiltonian([1.0, 0.0, 0.0], H)
+        outcome = parities_outcome(bitstring, H)
+        self.assertEqual(outcome, 1.0)
+
+    def test_parities_outcome_invalid_operator(self):
+        bitstring = "0101"
+        H = qml.PauliZ(0) @ qml.PauliX(2)
+        with self.assertRaises(ValueError):
+            parities_outcome(bitstring, H)
+
+    def test_parities_outcome_probs(self):
+        probs = {"0100": 0.5, "1010": 0.5}
+        H = [qml.PauliZ(0) @ qml.PauliZ(1) @ qml.PauliZ(2) @ qml.PauliZ(3)]
+        H = qml.Hamiltonian([0.8], H)
+        outcomes = parities_outcome_probs(probs, H)
+        self.assertEqual(outcomes, {0.8: 0.5, -0.8: 0.5})
+
+    def test_parities_outcome_probs_invalid_operator(self):
+        probs = {"0101": 0.5, "1010": 0.5}
+        H = qml.PauliZ(0) @ qml.PauliX(2)
+        H.return_type = None
+        with self.assertRaises(ValueError):
+            parities_outcome_probs(probs, H)
 
 
 if __name__ == "__main__":

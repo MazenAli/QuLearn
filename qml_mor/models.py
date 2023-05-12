@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, TypeVar, Generic
+from typing import List, TypeVar, Generic, Dict
 import math
 
 # for python < 3.10
@@ -13,16 +13,18 @@ import pennylane as qml
 
 Tensor: TypeAlias = torch.Tensor
 Expectation: TypeAlias = qml.measurements.ExpectationMP
-Observable: TypeAlias = qml.operation.Observable
+Observable: TypeAlias = qml.Hamiltonian
 Probability: TypeAlias = qml.measurements.ProbabilityMP
+Sample: TypeAlias = qml.measurements.SampleMP
 X = TypeVar("X")
 P = TypeVar("P")
 Y = TypeVar("Y")
 E = TypeVar("E")
 Pr = TypeVar("Pr")
+S = TypeVar("S")
 
 
-class QNNModel(ABC, Generic[X, P, E, Pr]):
+class QNNModel(ABC, Generic[X, P, E, Pr, S]):
     """Abstract base class for a quantum neural network model."""
 
     def __init__(self) -> None:
@@ -39,11 +41,23 @@ class QNNModel(ABC, Generic[X, P, E, Pr]):
 
     @abstractmethod
     def probabilities(self, x: X, params: P) -> Pr:
-        """Constructs a circuit for a given input and parameters."""
-        return self.probabilities(x, params)
+        """Constructs a probability object for a given input and parameters."""
+        pass
+
+    @abstractmethod
+    def sample(self, x: X, params: P) -> S:
+        """Constructs a sample object for a given input and parameters."""
+        pass
+
+    @abstractmethod
+    def outcome_probs(self, probs: Dict[str, float], params: P) -> Dict[float, float]:
+        """Dictionary of outcomes with probabilities."""
+        pass
 
 
-class IQPEReuploadSU2Parity(QNNModel[Tensor, List[Tensor], Expectation, Probability]):
+class IQPEReuploadSU2Parity(
+    QNNModel[Tensor, List[Tensor], Expectation, Probability, Sample]
+):
     """
     An IQP embedding circuit with additional SU(2) gates and parity measurements.
 
@@ -106,6 +120,31 @@ class IQPEReuploadSU2Parity(QNNModel[Tensor, List[Tensor], Expectation, Probabil
 
         return iqpe_reupload_su2_probs(x, init_theta, theta, self.omega)
 
+    def sample(self, x: Tensor, params: List[Tensor]) -> Sample:
+        """
+        Returns the samples of measurements for the circuit given
+        the input features and the parameters.
+
+        Args:
+            x (Tensor): The input features for the circuit of dimension (num_qubits,).
+            params (List[Tensor]): The parameters for the circuit. Must be a list of
+                three tensors: the initial thetas, the main thetas, and the weights W.
+
+        Returns:
+            Sample: The measurement samples of the circuit.
+
+        Raises:
+            ValueError: If the length of params is not at least 2.
+        """
+
+        if len(params) <= 2:
+            raise ValueError("Parameters must be a list of at least 2 tensors")
+
+        init_theta = params[0]
+        theta = params[1]
+
+        return iqpe_reupload_su2_sample(x, init_theta, theta, self.omega)
+
     def Hamiltonian(self, params: List[Tensor]) -> Observable:
         """
         Hamiltonian corresponding to the parity of Pauli Z operators.
@@ -137,6 +176,25 @@ class IQPEReuploadSU2Parity(QNNModel[Tensor, List[Tensor], Expectation, Probabil
         H = parity_hamiltonian(num_qubits, W)
 
         return H
+
+    def outcome_probs(
+        self, probs: Dict[str, float], params: List[Tensor]
+    ) -> Dict[float, float]:
+        """
+        Compute (real-valued) outputs with corresponding probabilities.
+
+        Args:
+            probs (Dict): Dictionary of probabilities of bitstrings.
+            params (List[Tensor]): QNN input and parameters.
+
+        Returns:
+            Dict: Values with corresponding probabilities.
+        """
+
+        H = self.Hamiltonian(params)
+        outcomes = parities_outcome_probs(probs, H)
+
+        return outcomes
 
 
 class Model(ABC, Generic[X, P, Y]):
@@ -343,6 +401,32 @@ def iqpe_reupload_su2_probs(
     return qml.probs()
 
 
+def iqpe_reupload_su2_sample(
+    x: Tensor,
+    init_theta: Tensor,
+    theta: Tensor,
+    omega: float = 0.0,
+) -> Probability:
+    """
+    Quantum function that calculates the measurement probabilities
+    in the state defined by x and theta.
+
+    Args:
+        x (Tensor): Input tensor of shape (num_qubits,).
+        init_theta (Tensor): Initial rotation angles for each qubit,
+            of shape (reps, num_qubits).
+        theta (Tensor): Rotation angles for each layer and each qubit,
+            of shape (reps, num_layers, num_qubits-1, 2).
+        omega (float, optional): Exponential feature scaling factor. Defaults to 0.0.
+
+    Returns:
+        Sample: Measurement samples.
+    """
+
+    iqpe_reupload_su2_circuit(x, init_theta, theta, omega)
+    return qml.sample()
+
+
 def sequence_generator(n: int) -> List[List[int]]:
     """
      Generates all possible binary sequences of length n.
@@ -394,3 +478,76 @@ def parities(n: int) -> List[Observable]:
     ops.append(qml.Identity(0))
 
     return ops
+
+
+def parities_outcome(bitstring: str, H: Observable) -> float:
+    """
+    Compute the measurement outcome for a given bit string and Hamiltonian.
+    Only works for Hamiltonians with identity and Pauli Z.
+
+    Args:
+        bitstring (str): Input bit string.
+        H (Observable): Hamiltonian.
+
+    Returns:
+        float: Real-valued outcome.
+
+    Raises:
+        ValueError: If number of qubits does not match
+            or operators other than I or Z are detected.
+    """
+
+    num_qubits = len(bitstring)
+    num_wires = len(H.wires)
+
+    if num_qubits != num_wires:
+        raise ValueError(
+            f"Number of qubits ({num_qubits}) "
+            f"does not match number of wires ({num_wires})"
+        )
+
+    sum = 0.0
+    for idx, O in enumerate(H.ops):
+        if not isinstance(O.name, list):
+            if O.name == "Identity":
+                sum += H.coeffs[idx]
+            elif O.name == "PauliZ":
+                i = O.wires[0]
+                sign = (-1) ** (int(bitstring[-1 - i]))
+                sum += sign * H.coeffs[idx]
+            else:
+                raise ValueError("All operators must be PauliZ or Identity.")
+
+        else:
+            if not all(name == "PauliZ" for name in O.name):
+                raise ValueError("All operators must be PauliZ or Identity.")
+
+            sign = 1
+            for w in O.wires:
+                sign *= (-1) ** (int(bitstring[-1 - w]))
+
+            sum += sign * H.coeffs[idx]
+
+    return sum
+
+
+def parities_outcome_probs(
+    probs: Dict[str, float], H: Observable
+) -> Dict[float, float]:
+    """
+    Compute (real-valued) outputs with corresponding probabilities.
+
+    Args:
+        probs (Dict): Dictionary of probabilities of bitstrings.
+        H (Observable): Hamiltonian determening the outcome.
+
+    Returns:
+        Dict: Values with corresponding probabilities.
+    """
+
+    result = {}
+    for b, p in probs.items():
+        val = parities_outcome(b, H)
+        result[val] = p
+
+    return result

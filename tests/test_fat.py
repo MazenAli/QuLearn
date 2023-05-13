@@ -3,7 +3,7 @@ import unittest
 
 from qml_mor.models import LinearModel
 from qml_mor.fat import fat_shattering_dim, check_shattering, normalize_const
-from qml_mor.datagen import DataGenFat
+from qml_mor.datagen import DataGenFat, UniformPrior
 from qml_mor.optimize import AdamTorch
 
 
@@ -23,7 +23,8 @@ class TestFunctions(unittest.TestCase):
         Sr = 3
         gamma = 0.1
 
-        datagen = DataGenFat(sizex, Sb, Sr, 2.0 * gamma)
+        prior = UniformPrior(sizex)
+        datagen = DataGenFat(prior, Sb, Sr, 2.0 * gamma)
 
         class DummyModel:
             def __call__(self, x, params):
@@ -46,7 +47,8 @@ class TestFunctions(unittest.TestCase):
         Sr = 3
         gamma = 0.1
 
-        datagen = DataGenFat(sizex, Sb, Sr, 2.0 * gamma)
+        prior = UniformPrior(sizex)
+        datagen = DataGenFat(prior, Sb, Sr, 2.0 * gamma)
 
         class DummyModel:
             def __call__(self, x, params):
@@ -74,7 +76,8 @@ class TestFunctions(unittest.TestCase):
         gamma = 0.1
         seed = 0
 
-        datagen = DataGenFat(sizex, Sb, Sr, 2.0 * gamma, seed=seed)
+        prior = UniformPrior(sizex)
+        datagen = DataGenFat(prior, Sb, Sr, 2.0 * gamma, seed=seed)
 
         model = LinearModel()
 

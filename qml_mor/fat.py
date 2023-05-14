@@ -8,8 +8,8 @@ import warnings
 import torch
 import pennylane as qml
 
-from .optimize import Optimizer
 from .datagen import DataGenTorch
+from .optimize import Optimizer
 
 Tensor: TypeAlias = torch.Tensor
 Model: TypeAlias = qml.QNode

@@ -75,12 +75,11 @@ class PriorTorch(DataGenTorch[D]):
 
     Args:
         sizex (int): Dimension of feature space.
-        args: Variable length argument list passed to the base class.
-        kwargs: Arbitrary keyword arguments passed to the base class.
+        kwargs: Keyword arguments passed to the base class.
     """
 
-    def __init__(self, sizex: int, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, sizex: int, **kwargs) -> None:
+        super().__init__(**kwargs)
         self.sizex = sizex
 
 
@@ -96,8 +95,7 @@ class DataGenCapacity(DataGenTorch[DataOut]):
             random numbers in [0, 1]. Defaults to 2.0.
         shift (float, optional): The shift value for uniform
             random numbers in [0, 1]. Defaults to -1.0.
-        args: Variable length argument list passed to the base class.
-        kwargs: Arbitrary keyword arguments passed to the base class.
+        kwargs: Keyword arguments passed to the base class.
     """
 
     def __init__(
@@ -106,10 +104,9 @@ class DataGenCapacity(DataGenTorch[DataOut]):
         num_samples: int = 10,
         scale: float = 2.0,
         shift: float = -1.0,
-        *args,
         **kwargs,
     ) -> None:
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
         self.sizex = sizex
         self.num_samples = num_samples
@@ -154,8 +151,7 @@ class DataGenFat(DataGenTorch[DataOut]):
             Defaults to 10.
         gamma (float): The fat shattering parameter gamma.
             Defaults to 0.0 (pseudo-dimension).
-        args: Variable length argument list passed to the base class.
-        kwargs: Arbitrary keyword arguments passed to the base class.
+        kwargs: Keyword arguments passed to the base class.
     """
 
     def __init__(
@@ -164,10 +160,9 @@ class DataGenFat(DataGenTorch[DataOut]):
         Sb: int = 10,
         Sr: int = 10,
         gamma: float = 0.0,
-        *args,
         **kwargs,
     ) -> None:
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
         self.Sb = Sb
         self.Sr = Sr
@@ -200,7 +195,7 @@ class DataGenRademacher(DataGenTorch[DataOut]):
     Generates uniform data for estimating the empirical Rademacher complexity.
 
     Args:
-        sizex (int): The size of the input data (dim of feature space).
+        prior (PriorTorch): Prior for generating X samples.
         num_sigma_samples (int, optional): Number of samples for sigma.
             Defaults to 10.
         num_data_samples (int): Number of samples for data sets.
@@ -211,8 +206,7 @@ class DataGenRademacher(DataGenTorch[DataOut]):
             random numbers in [0, 1]. Defaults to 2.0.
         shift (float, optional): The shift value for uniform
             random numbers in [0, 1]. Defaults to -1.0.
-        args: Variable length argument list passed to the base class.
-        kwargs: Arbitrary keyword arguments passed to the base class.
+        kwargs: Keyword arguments passed to the base class.
     """
 
     def __init__(
@@ -220,10 +214,9 @@ class DataGenRademacher(DataGenTorch[DataOut]):
         prior: PriorTorch,
         num_sigma_samples: int = 10,
         num_data_samples: int = 10,
-        *args,
         **kwargs,
     ) -> None:
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
         self.prior = prior
         self.num_sigma_samples = num_sigma_samples
@@ -262,14 +255,13 @@ class UniformPrior(PriorTorch[Tensor]):
             random numbers in [0, 1]. Defaults to 2.0.
         shift (float, optional): The shift value for uniform
             random numbers in [0, 1]. Defaults to -1.0.
-        args: Variable length argument list passed to the base class.
-        kwargs: Arbitrary keyword arguments passed to the base class.
+        kwargs: Keyword arguments passed to the base class.
     """
 
     def __init__(
-        self, sizex: int, scale: float = 2.0, shift: float = -1.0, *args, **kwargs
+        self, sizex: int, scale: float = 2.0, shift: float = -1.0, **kwargs
     ) -> None:
-        super().__init__(sizex, *args, **kwargs)
+        super().__init__(sizex, **kwargs)
 
         self.scale = scale
         self.shift = shift
@@ -307,14 +299,13 @@ class NormalPrior(PriorTorch[Tensor]):
             Defaults to 1.0.
         shift (float, optional): The shift value for standard normal.
             Defaults to 0.0.
-        args: Variable length argument list passed to the base class.
-        kwargs: Arbitrary keyword arguments passed to the base class.
+        kwargs: Keyword arguments passed to the base class.
     """
 
     def __init__(
-        self, sizex: int, scale: float = 1.0, shift: float = 0.0, *args, **kwargs
+        self, sizex: int, scale: float = 1.0, shift: float = 0.0, **kwargs
     ) -> None:
-        super().__init__(sizex, *args, **kwargs)
+        super().__init__(sizex, **kwargs)
 
         self.scale = scale
         self.shift = shift

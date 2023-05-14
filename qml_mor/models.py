@@ -27,9 +27,6 @@ S = TypeVar("S")
 class QNNModel(ABC, Generic[X, P, E, Pr, S]):
     """Abstract base class for a quantum neural network model."""
 
-    def __init__(self) -> None:
-        pass
-
     @abstractmethod
     def expectation(self, x: X, params: P) -> E:
         """Constructs an expectation object for a given input and parameters."""
@@ -199,9 +196,6 @@ class IQPEReuploadSU2Parity(
 
 class Model(ABC, Generic[X, P, Y]):
     """Abstract base class for regression models f(x, params)."""
-
-    def __init__(self) -> None:
-        pass
 
     @abstractmethod
     def __call__(self, x: X, params: P) -> Y:

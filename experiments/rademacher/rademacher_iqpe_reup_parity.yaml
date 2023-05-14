@@ -1,14 +1,10 @@
-dmin: 2
-dmax: 3
-dstep: 1
-gamma: 0.1
-gamma_fac: 2.0
+m: 10
 num_qubits: 3
 num_reups: 1
 num_layers: 1
 omega: 0.0
-Sb: 5
-Sr: 3
+num_sigma_samples: 10
+num_data_samples: 5
 lr: 0.1
 amsgrad: true
 opt_steps: 300
@@ -16,5 +12,5 @@ opt_stop: 1e-16
 stagnation_threshold: 0.01
 stagnation_count: 100
 seed: 0
-save_dir: "./results/fat_iqpe_reup_parity"
+save_dir: "./results/rademacher_iqpe_reup_parity"
 cuda: false

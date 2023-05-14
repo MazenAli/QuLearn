@@ -195,7 +195,7 @@ class DataGenRademacher(DataGenTorch[DataOut]):
     Generates uniform data for estimating the empirical Rademacher complexity.
 
     Args:
-        sizex (int): The size of the input data (dim of feature space).
+        prior (PriorTorch): Prior for generating X samples.
         num_sigma_samples (int, optional): Number of samples for sigma.
             Defaults to 10.
         num_data_samples (int): Number of samples for data sets.

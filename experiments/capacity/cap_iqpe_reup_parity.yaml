@@ -15,5 +15,5 @@ stagnation_count: 100
 early_stop: true
 stop_count: 1
 seed: 0
-save_dir: "./results/torch_iqpe_reup_parity"
+save_dir: "./results/cap_iqpe_reup_parity"
 cuda: false

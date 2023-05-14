@@ -8,50 +8,27 @@ import json
 import torch
 import pennylane as qml
 from qml_mor.models import IQPEReuploadSU2Parity
-from qml_mor.fat import fat_shattering_dim, normalize_const
-from qml_mor.datagen import DataGenFat, UniformPrior
+from qml_mor.loss import RademacherLoss
+from qml_mor.rademacher import rademacher
+from qml_mor.datagen import NormalPrior, DataGenRademacher
 from qml_mor.optimize import AdamTorch
 
 
 def parse_args():
     # Read the configuration file
-    with open("fat_iqpe_reup_parity.yaml", "r") as f:
+    with open("rademacher_iqpe_reup_parity.yaml", "r") as f:
         config = yaml.safe_load(f)
     amsgrad = config.get("amsgrad", False)
     cuda = config.get("cuda", False)
 
     parser = argparse.ArgumentParser(
-        description="Process arguments for QML-MOR fat shattering experiments"
+        description="Process arguments for QML-MOR rademacher complexity experiments"
     )
     parser.add_argument(
-        "--dmin",
+        "--m",
         type=int,
-        default=config["dmin"],
-        help="Minimum value of d for experiments",
-    )
-    parser.add_argument(
-        "--dmax",
-        type=int,
-        default=config["dmax"],
-        help="Maximum value of d for experiments (included)",
-    )
-    parser.add_argument(
-        "--dstep",
-        type=int,
-        default=config["dstep"],
-        help="Step size for d in experiments",
-    )
-    parser.add_argument(
-        "--gamma",
-        type=float,
-        default=config["gamma"],
-        help="Margin value for fat shattering",
-    )
-    parser.add_argument(
-        "--gamma_fac",
-        type=float,
-        default=config["gamma_fac"],
-        help="Additional multiplicative factor for margin value",
+        default=config["m"],
+        help="Size of data set",
     )
     parser.add_argument(
         "--num_qubits",
@@ -78,16 +55,16 @@ def parse_args():
         help="The exponential feature scaling factor",
     )
     parser.add_argument(
-        "--Sb",
+        "--num_data_samples",
         type=int,
-        default=config["Sb"],
-        help="Number of binary samples to check shattering",
+        default=config["num_data_samples"],
+        help="Number of data samples for estimation",
     )
     parser.add_argument(
-        "--Sr",
+        "--num_sigma_samples",
         type=int,
-        default=config["Sr"],
-        help="number of level offset samples to check shattering",
+        default=config["num_sigma_samples"],
+        help="Numer of sigma samples for estimation",
     )
     parser.add_argument(
         "--lr",
@@ -177,8 +154,27 @@ def main(args):
     qdevice = qml.device("lightning.qubit", wires=args.num_qubits, shots=shots)
     qnode = qml.QNode(qnn_model.qfunction, qdevice, interface="torch")
 
+    # Set data generating method
+    sizex = num_qubits
+    num_sigma_samples = args.num_sigma_samples
+    num_data_samples = args.num_data_samples
+    prior = NormalPrior(sizex=sizex, seed=seed, device=cdevice)
+    datagen = DataGenRademacher(
+        prior=prior,
+        num_sigma_samples=num_sigma_samples,
+        num_data_samples=num_data_samples,
+        seed=seed,
+        device=cdevice,
+    )
+
+    m = args.m
+    data = datagen.gen_data(m)
+    X = data["X"]
+    sigmas = data["sigmas"]
+
     # Set optimizer
-    loss_fn = torch.nn.MSELoss()
+    sigma = sigmas[0]
+    loss_fn = RademacherLoss(sigma)
     opt = AdamTorch(
         params=params,
         loss_fn=loss_fn,
@@ -190,32 +186,9 @@ def main(args):
         stagnation_count=args.stagnation_count,
     )
 
-    # Set data generating method
-    sizex = num_qubits
-    Sb = args.Sb
-    Sr = args.Sr
-    gamma = args.gamma
-    gamma_fac = args.gamma_fac
-    prior = UniformPrior(sizex=sizex, seed=seed, device=cdevice)
-    datagen = DataGenFat(
-        prior=prior, Sb=Sb, Sr=Sr, gamma=gamma_fac * gamma, seed=seed, device=cdevice
-    )
-
-    # Estimate fat shattering dimension
-    dmin = args.dmin
-    dmax = args.dmax
-    dstep = args.dstep
-
+    # Estimate Rademacher complexity
     start_time = time.time()
-    fat_dim = fat_shattering_dim(
-        model=qnode,
-        datagen=datagen,
-        opt=opt,
-        dmin=dmin,
-        dmax=dmax,
-        gamma=gamma,
-        dstep=dstep,
-    )
+    rad_compl = rademacher(model=qnode, opt=opt, X=X, sigmas=sigmas)
     end_time = time.time()
     time_taken = end_time - start_time
 
@@ -228,8 +201,6 @@ def main(args):
     num_params_obs = torch.numel(W)
     num_params = num_params_gates + num_params_obs
 
-    norm = normalize_const(weights=W, gamma=gamma, Rx=sizex)
-
     results = {
         "date": creation_date,
         "time_taken": time_taken,
@@ -238,21 +209,16 @@ def main(args):
         "num_layers": args.num_layers,
         "num_reups": args.num_reups,
         "omega": omega,
-        "dmin": dmin,
-        "dmax": dmax,
-        "dstep": dstep,
-        "gamma": gamma,
-        "gamma_fac": gamma_fac,
+        "m": m,
         "num_params_gates": num_params_gates,
         "num_params_obs": num_params_obs,
         "num_params": num_params,
-        "Sb": Sb,
-        "Sr": Sr,
+        "num_data_samples": num_data_samples,
+        "num_sigma_samples": num_sigma_samples,
         "opt_steps": args.opt_steps,
         "opt_stop": args.opt_stop,
         "seed": seed,
-        "fat_dim": fat_dim,
-        "fat_dim_norm": fat_dim / norm,
+        "rademacher": rad_compl.item(),
     }
     exp_id = str(uuid.uuid4())
     direc = args.save_dir

@@ -9,7 +9,7 @@ import torch
 import pennylane as qml
 from qml_mor.models import IQPEReuploadSU2Parity
 from qml_mor.fat import fat_shattering_dim, normalize_const
-from qml_mor.datagen import DataGenFat
+from qml_mor.datagen import DataGenFat, UniformPrior
 from qml_mor.optimize import AdamTorch
 
 
@@ -196,8 +196,9 @@ def main(args):
     Sr = args.Sr
     gamma = args.gamma
     gamma_fac = args.gamma_fac
+    prior = UniformPrior(sizex=sizex, seed=seed, device=cdevice)
     datagen = DataGenFat(
-        sizex=sizex, Sb=Sb, Sr=Sr, gamma=gamma_fac * gamma, seed=seed, device=cdevice
+        prior=prior, Sb=Sb, Sr=Sr, gamma=gamma_fac * gamma, seed=seed, device=cdevice
     )
 
     # Estimate capacity

@@ -14,7 +14,7 @@ def main():
             "omega": 0.0,
             "num_sigma_samples": 10,
             "num_data_samples": 5,
-            "opt_steps": 300,
+            "num_epochs": 300,
             "opt_stop": 1e-16,
             "stagnation_threshold": 0.01,
             "stagnation_count": 100,

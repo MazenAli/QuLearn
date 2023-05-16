@@ -1,4 +1,4 @@
-from typing import Iterable, Dict, Generic, TypeVar
+from typing import Iterable, Generic, TypeVar
 
 # for python < 3.10
 try:
@@ -15,7 +15,7 @@ Tensor: TypeAlias = torch.Tensor
 Loss: TypeAlias = torch.nn.Module
 Model: TypeAlias = qml.QNode
 Params = Iterable[Tensor]
-Data = Dict[str, Tensor]
+Data: TypeAlias = torch.utils.data.DataLoader
 P = TypeVar("P")
 L = TypeVar("L")
 M = TypeVar("M")
@@ -29,11 +29,11 @@ class Optimizer(ABC, Generic[P, L, M, D]):
     Args:
         params (P): Parameters to optimize.
         loss_fn (L): Loss function to minimize.
-        opt_steps (int): Maximum number of optimization steps.
+        num_epochs (int): Maximum number of epochs.
         opt_stop (float): Stop optimization if loss is smaller
             than this value.
         stagnation_threshold (float): If relative reduction in loss
-            smaller than this stagnation_count times, stop.
+            smaller than this for stagnation_count times, stop.
         stagnation_count (int): See stagnation_threshold.
         best_loss (bool): Return parameters corresponding to best loss value.
     """
@@ -42,7 +42,7 @@ class Optimizer(ABC, Generic[P, L, M, D]):
         self,
         params: P,
         loss_fn: L,
-        opt_steps: int,
+        num_epochs: int,
         opt_stop: float,
         stagnation_threshold: float,
         stagnation_count: int,
@@ -50,7 +50,7 @@ class Optimizer(ABC, Generic[P, L, M, D]):
     ) -> None:
         self.params = params
         self.loss_fn = loss_fn
-        self.opt_steps = opt_steps
+        self.num_epochs = num_epochs
         self.opt_stop = opt_stop
         self.stagnation_threshold = stagnation_threshold
         self.stagnation_count = stagnation_count
@@ -82,7 +82,7 @@ class AdamTorch(Optimizer[Params, Loss, Model, Data]):
         amsgrad (bool, optional): Use AMSGrad variant of Adam. Defaults to False.
         kwargs: Additional keyword arguments for base class and torch.optim.Adam.
             For Optimizer:
-                - opt_steps (int, optional): Defaults to 300.
+                - num_epochs (int, optional): Defaults to 300.
                 - opt_stop (float, optional): Defaults to 1e-16.
                 - stagnation_threshold (float, optional): Defaults to 0.01.
                 - stagnation_count (int, optional): Defaults to 100.
@@ -99,7 +99,7 @@ class AdamTorch(Optimizer[Params, Loss, Model, Data]):
         **kwargs,
     ) -> None:
         base_kwargs = {
-            "opt_steps": kwargs.pop("opt_steps", 300),
+            "num_epochs": kwargs.pop("num_epochs", 300),
             "opt_stop": kwargs.pop("opt_stop", 1e-16),
             "stagnation_threshold": kwargs.pop("stagnation_threshold", 1e-02),
             "stagnation_count": kwargs.pop("stagnation_count", 100),
@@ -112,7 +112,7 @@ class AdamTorch(Optimizer[Params, Loss, Model, Data]):
 
     def optimize(self, model: Model, data: Data) -> Params:
         """
-        Optimize the parameters of a model using the Adam algorithm.
+        Optimize the parameters of a model using the Adam/Amsgrad algorithm.
 
         Args:
             model (Model): The model to optimize.
@@ -120,10 +120,6 @@ class AdamTorch(Optimizer[Params, Loss, Model, Data]):
 
         Returns:
             Params: The optimized parameters.
-
-        Raises:
-            ValueError: If number of X samples in data
-                does not match number of Y samples.
         """
 
         opt = torch.optim.Adam(
@@ -133,42 +129,38 @@ class AdamTorch(Optimizer[Params, Loss, Model, Data]):
             **self.kwargs,
         )
 
-        X = data["X"]
-        Y = data["Y"]
-
-        Nx = len(X)
-        Ny = len(Y)
-        if Nx != Ny:
-            raise ValueError(
-                f"Number of samples for X ({Nx}) "
-                f"not equal to number of samples for Y ({Ny})"
-            )
-
         params = self.params
         prev_loss = None
         stag_counter = 0
         best_params = params
         best_loss = float("inf")
-        for n in range(self.opt_steps):
-            opt.zero_grad()
-            pred = torch.stack([model(X[k], params) for k in range(Nx)])
-            loss = self.loss_fn(pred, Y)
-            loss.backward()
-            opt.step()
+        for epoch in range(self.num_epochs):
+            total_loss = 0.0
+            total_size = 0
+            for batch_X, batch_Y in data:
+                opt.zero_grad()
+                Nx = batch_X.size(0)
+                pred = torch.stack([model(batch_X[k], params) for k in range(Nx)])
+                loss = self.loss_fn(pred, batch_Y)
+                loss.backward()
+                opt.step()
 
+                total_loss += loss.item() * Nx
+                total_size += Nx
+
+            loss_val = total_loss / total_size
             if self.best_loss:
-                loss_val = loss.item()
                 if loss_val < best_loss:
                     best_loss = loss_val
                     best_params = [
                         t.detach().clone().requires_grad_(t.requires_grad)
                         for t in params
                     ]
-            if loss <= self.opt_stop:
+            if loss_val <= self.opt_stop:
                 break
 
             if prev_loss is not None:
-                loss_delta = (prev_loss - loss.item()) / prev_loss
+                loss_delta = (prev_loss - loss_val) / prev_loss
 
                 if loss_delta < self.stagnation_threshold:
                     stag_counter += 1
@@ -177,7 +169,7 @@ class AdamTorch(Optimizer[Params, Loss, Model, Data]):
 
                 if stag_counter >= self.stagnation_count:
                     warnings.warn(
-                        f"ADAM: Stopping early at iteration {n}, loss not improving.\n"
+                        f"ADAM: Stopping early at epoch {epoch}, loss not improving.\n"
                         f"loss_delta ({loss_delta}) smaller "
                         f"than threshold ({self.stagnation_threshold}) "
                         f"for more than {self.stagnation_count} iterations."
@@ -185,6 +177,6 @@ class AdamTorch(Optimizer[Params, Loss, Model, Data]):
 
                     break
 
-            prev_loss = loss
+            prev_loss = loss_val
 
         return best_params

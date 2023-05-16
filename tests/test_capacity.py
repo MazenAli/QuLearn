@@ -38,7 +38,7 @@ class TestCapacity(unittest.TestCase):
             return model.qfunction(x, params)
 
         loss_fn = torch.nn.MSELoss()
-        opt = AdamTorch(params, loss_fn, opt_steps=20)
+        opt = AdamTorch(params, loss_fn, num_epochs=20)
 
         C = capacity(qnn_model, datagen, opt, Nmin, Nmax)
 
@@ -64,7 +64,7 @@ class TestCapacity(unittest.TestCase):
             params,
             loss_fn,
             amsgrad=True,
-            opt_steps=500,
+            num_epochs=500,
             opt_stop=1e-18,
             stagnation_count=500,
         )
@@ -105,7 +105,7 @@ class TestFitRandLabels(unittest.TestCase):
             return model.qfunction(x, params)
 
         loss_fn = torch.nn.MSELoss()
-        opt = AdamTorch(params, loss_fn, opt_steps=10)
+        opt = AdamTorch(params, loss_fn, num_epochs=10)
         mre = fit_rand_labels(qnn_model, datagen, opt, N)
 
         self.assertIsInstance(mre, float)

@@ -28,11 +28,11 @@ class TestRademacher(unittest.TestCase):
         loss_fn = RademacherLoss(data["sigmas"][0])
 
         opt = AdamTorch(
-            params, loss_fn, opt_steps=500, opt_stop=1e-18, stagnation_count=500
+            params, loss_fn, num_epochs=500, opt_stop=1e-18, stagnation_count=500
         )
 
         # Call function
-        radval = rademacher(model, opt, data["X"], data["sigmas"])
+        radval = rademacher(model, opt, data["X"], data["sigmas"], datagen)
         d = sizex + 1
         bound = math.sqrt(2 * d * math.log(math.e * m / d) / m)
 

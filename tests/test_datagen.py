@@ -1,6 +1,7 @@
 import unittest
 import math
 import torch
+from torch.utils.data import DataLoader
 import numpy as np
 from qml_mor.datagen import (
     DataGenCapacity,
@@ -12,6 +13,16 @@ from qml_mor.datagen import (
 
 
 class TestDataGenCapacity(unittest.TestCase):
+    def setUp(self):
+        sizex = 10
+        num_samples = 10
+        seed = 0
+        self.datagen = DataGenCapacity(sizex=sizex, num_samples=num_samples, seed=seed)
+        self.data = {
+            "X": torch.randn(100, sizex),
+            "Y": torch.randn(num_samples, 100),
+        }
+
     def test_gen_dataset(self):
         N = 3
         sizex = 2
@@ -28,6 +39,28 @@ class TestDataGenCapacity(unittest.TestCase):
         self.assertIsInstance(y, torch.Tensor)
         self.assertEqual(x.shape, (N, sizex))
         self.assertEqual(y.shape, (num_samples, N))
+
+    def test_data_to_loader_raises_value_error_for_invalid_s(self):
+        with self.assertRaises(ValueError):
+            self.datagen.data_to_loader(self.data, -1)
+
+    def test_data_to_loader_returns_correct_loader(self):
+        loader = self.datagen.data_to_loader(self.data, 0)
+        self.assertIsInstance(loader, DataLoader)
+        self.assertEqual(len(loader.dataset), 100)
+
+    def test_data_to_loader_returns_value_error(self):
+        with self.assertRaises(ValueError):
+            data = {"X": 0}
+            self.datagen.data_to_loader(data, 0)
+
+        with self.assertRaises(ValueError):
+            data = {"Y": 0}
+            self.datagen.data_to_loader(data, 0)
+
+        with self.assertRaises(ValueError):
+            data = {"X": torch.zeros(10), "Y": 0}
+            self.datagen.data_to_loader(data, 0)
 
 
 class TestDataGenFat(unittest.TestCase):
@@ -54,6 +87,42 @@ class TestDataGenFat(unittest.TestCase):
         self.assertIsInstance(r, np.ndarray)
         self.assertEqual(X.shape, (d, sizex))
         self.assertEqual(Y.shape, (Sr, Sb, d))
+
+    def setUp(self):
+        sizex = 10
+        seed = 0
+        prior = UniformPrior(sizex, seed=seed)
+        self.datagen = DataGenFat(prior=prior, Sb=10, Sr=10, seed=seed)
+        self.data = {
+            "X": torch.randn(100, sizex),
+            "Y": torch.randn(10, 10, 100),
+        }
+
+    def test_data_to_loader_raises_value_error_for_invalid_sr(self):
+        with self.assertRaises(ValueError):
+            self.datagen.data_to_loader(self.data, -1, 0)
+
+    def test_data_to_loader_raises_value_error_for_invalid_sb(self):
+        with self.assertRaises(ValueError):
+            self.datagen.data_to_loader(self.data, 0, -1)
+
+    def test_data_to_loader_returns_correct_loader(self):
+        loader = self.datagen.data_to_loader(self.data, 0, 0)
+        self.assertIsInstance(loader, DataLoader)
+        self.assertEqual(len(loader.dataset), 100)
+
+    def test_data_to_loader_returns_value_error(self):
+        with self.assertRaises(ValueError):
+            data = {"X": 0}
+            self.datagen.data_to_loader(data, 0, 0)
+
+        with self.assertRaises(ValueError):
+            data = {"Y": 0}
+            self.datagen.data_to_loader(data, 0, 0)
+
+        with self.assertRaises(ValueError):
+            data = {"X": torch.zeros(10), "Y": 0}
+            self.datagen.data_to_loader(data, 0, 0)
 
 
 class TestNormalPrior(unittest.TestCase):

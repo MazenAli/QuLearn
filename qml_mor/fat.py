@@ -8,12 +8,12 @@ import warnings
 import torch
 import pennylane as qml
 
-from .datagen import DataGenTorch
+from .datagen import DataGenFat
 from .optimize import Optimizer
 
 Tensor: TypeAlias = torch.Tensor
 Model: TypeAlias = qml.QNode
-Datagen: TypeAlias = DataGenTorch
+Datagen: TypeAlias = DataGenFat
 Opt: TypeAlias = Optimizer
 
 
@@ -80,15 +80,14 @@ def check_shattering(
 
     data = datagen.gen_data(d)
     X = data["X"]
-    Y = data["Y"]
     b = data["b"]
     r = data["r"]
 
     for sr in range(len(r)):
         shattered = True
         for sb in range(len(b)):
-            data_opt = {"X": X, "Y": Y[sr, sb]}
-            params = opt.optimize(model, data_opt)
+            loader = datagen.data_to_loader(data, sr, sb)
+            params = opt.optimize(model, loader)
             predictions = torch.stack([model(X[k], params) for k in range(d)])
 
             for i, pred in enumerate(predictions):

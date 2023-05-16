@@ -34,9 +34,14 @@ class TestTrainAdam(unittest.TestCase):
 
         # Train the model using the train_Adam function
         loss_fn = torch.nn.MSELoss()
-        opt = AdamTorch(params=params, loss_fn=loss_fn, opt_steps=20)
-        data = {"X": X, "Y": Y}
-        optimized_params = opt.optimize(qnn, data)
+        opt = AdamTorch(params=params, loss_fn=loss_fn, num_epochs=20)
+        batch_size = 1
+        shuffle = True
+        data = torch.utils.data.TensorDataset(X, Y)
+        loader = torch.utils.data.DataLoader(
+            data, batch_size=batch_size, shuffle=shuffle
+        )
+        optimized_params = opt.optimize(qnn, loader)
 
         # Check if the returned optimized parameters
         # have the same shape as the input parameters

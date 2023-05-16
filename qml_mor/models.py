@@ -9,8 +9,10 @@ except ImportError:
     from typing_extensions import TypeAlias
 
 import torch
+from torch.nn import Module
 import pennylane as qml
 
+QDevice: TypeAlias = qml.Device
 Tensor: TypeAlias = torch.Tensor
 Expectation: TypeAlias = qml.measurements.ExpectationMP
 Observable: TypeAlias = qml.Hamiltonian
@@ -24,8 +26,11 @@ Pr = TypeVar("Pr")
 S = TypeVar("S")
 
 
-class QNNModel(ABC, Generic[X, P, E, Pr, S]):
-    """Abstract base class for a quantum neural network model."""
+class QNNModel(Module, Generic[X, P, E, Pr, S]):
+    """Base class for a quantum neural network model."""
+
+    def __init__(self) -> None:
+        super().__init__()
 
     @abstractmethod
     def expectation(self, x: X, params: P) -> E:
@@ -59,12 +64,51 @@ class IQPEReuploadSU2Parity(
     An IQP embedding circuit with additional SU(2) gates and parity measurements.
 
     Args:
+        qdevice (QDevice): Quantum device.
+        params (List[Tensor]): List of initiial parameters.
         omega (float, optional): The exponential feature scaling factor.
             Defaults to 0.0.
+        model_type (str, optional): Specify type of model as "expectation",
+            "probabilities", or "samples". Defaults to "expectation".
     """
 
-    def __init__(self, omega: float = 0.0) -> None:
+    def __init__(
+        self,
+        qdevice: QDevice,
+        params: List[Tensor],
+        omega: float = 0.0,
+        model_type: str = "expectation",
+    ) -> None:
+        super().__init__()
+        self.qdevice = qdevice
+        self.weights = params
         self.omega = omega
+        self.model_type = model_type
+        self._check_model_type()
+
+    def forward(self, X: Tensor) -> Tensor:
+        """
+        Returns expectation values by default,
+        or probabilities if stat_model set to True.
+
+        Args:
+            X (Tensor): Input tensor of dimension (dimX,) or (num_samples, dimX).
+        """
+
+        if self.model_type == "expectation":
+            qnode = qml.QNode(self.expectation, self.qdevice, interface="torch")
+        elif self.model_type == "probabilities":
+            qnode = qml.QNode(self.probabilities, self.qdevice, interface="torch")
+        elif self.model_type == "samples":
+            qnode = qml.QNode(self.sample, self.qdevice, interface="torch")
+
+        if len(X.shape) == 1:
+            out = qnode(X, self.weights)
+        else:
+            Nx = X.size(0)
+            out = torch.stack([qnode(X[k], self.weights) for k in range(Nx)])
+
+        return out
 
     def expectation(self, x: Tensor, params: List[Tensor]) -> Expectation:
         """
@@ -192,6 +236,11 @@ class IQPEReuploadSU2Parity(
         outcomes = parities_outcome_probs(probs, H)
 
         return outcomes
+
+    def _check_model_type(self):
+        valid_types = ("expectation", "probabilities", "samples")
+        if self.model_type not in valid_types:
+            raise ValueError(f"Invalid model_type, should be one of {valid_types}")
 
 
 class Model(ABC, Generic[X, P, Y]):

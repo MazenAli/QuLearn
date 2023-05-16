@@ -1,4 +1,4 @@
-from typing import Iterable, Generic, TypeVar
+from typing import Iterable, Generic, TypeVar, Tuple
 
 # for python < 3.10
 try:
@@ -11,24 +11,29 @@ import warnings
 import torch
 import pennylane as qml
 
+
 Tensor: TypeAlias = torch.Tensor
 Loss: TypeAlias = torch.nn.Module
+Optimizer: TypeAlias = torch.optim.Optimizer
+Writer: TypeAlias = torch.utils.tensorboard.writer.SummaryWriter
 Model: TypeAlias = qml.QNode
 Params = Iterable[Tensor]
 Data: TypeAlias = torch.utils.data.DataLoader
-P = TypeVar("P")
+Op = TypeVar("Op")
+W = TypeVar("W")
 L = TypeVar("L")
 M = TypeVar("M")
 D = TypeVar("D")
 
 
-class Optimizer(ABC, Generic[P, L, M, D]):
+class Optimize(ABC, Generic[Op, L, W, M, D]):
     """
-    Abstract base class for optimization algorithms.
+    Abstract base class for optimizing model parameters.
 
     Args:
-        params (P): Parameters to optimize.
+        optimizer (Op): Optimizer for updating parameters.
         loss_fn (L): Loss function to minimize.
+        writer (W): Writer for logging.
         num_epochs (int): Maximum number of epochs.
         opt_stop (float): Stop optimization if loss is smaller
             than this value.
@@ -40,16 +45,18 @@ class Optimizer(ABC, Generic[P, L, M, D]):
 
     def __init__(
         self,
-        params: P,
+        optimizer: Op,
         loss_fn: L,
+        writer: W,
         num_epochs: int,
         opt_stop: float,
         stagnation_threshold: float,
         stagnation_count: int,
         best_loss: bool,
     ) -> None:
-        self.params = params
+        self.optimizer = optimizer
         self.loss_fn = loss_fn
+        self.writer = writer
         self.num_epochs = num_epochs
         self.opt_stop = opt_stop
         self.stagnation_threshold = stagnation_threshold
@@ -57,45 +64,43 @@ class Optimizer(ABC, Generic[P, L, M, D]):
         self.best_loss = best_loss
 
     @abstractmethod
-    def optimize(self, model: M, data: D) -> Params:
+    def train(self, model: M, train_data: D, valid_data: D) -> float:
         """
         Optimize model parameters using the given data.
 
         Args:
             model (M): The model to optimize.
-            data (D): The data used to optimize the model.
+            train_data (D): Data used for training.
+            valid_data (D): Data used for validation.
 
         Returns:
-            Params: The optimized parameters.
+            float: The final loss value.
         """
         pass
 
 
-class AdamTorch(Optimizer[Params, Loss, Model, Data]):
+class VanillaTorchOptimize(Optimize[Optimizer, Loss, Writer, Model, Data]):
     """
     Wrapper for torch Adam.
 
     Args:
-        params (Params): Parameters to optimize.
+        optimizer (Optimizer): Torch optimizer.
         loss_fn (Loss): Loss function to minimize.
-        lr (float, optional): Learning rate. Defaults to 0.1.
-        amsgrad (bool, optional): Use AMSGrad variant of Adam. Defaults to False.
-        kwargs: Additional keyword arguments for base class and torch.optim.Adam.
+        writer (Writer): Tensorboard writer for logging.
+        kwargs: Additional keyword arguments for base class.
             For Optimizer:
                 - num_epochs (int, optional): Defaults to 300.
                 - opt_stop (float, optional): Defaults to 1e-16.
                 - stagnation_threshold (float, optional): Defaults to 0.01.
                 - stagnation_count (int, optional): Defaults to 100.
                 - best_loss (bool, optional): Defaults to True.
-            Other keywords passed to torch.optim.Adam.
     """
 
     def __init__(
         self,
-        params: Params,
+        optimizer: Optimizer,
         loss_fn: Loss,
-        lr=0.1,
-        amsgrad=False,
+        writer: Writer,
         **kwargs,
     ) -> None:
         base_kwargs = {
@@ -105,62 +110,59 @@ class AdamTorch(Optimizer[Params, Loss, Model, Data]):
             "stagnation_count": kwargs.pop("stagnation_count", 100),
             "best_loss": kwargs.pop("best_loss", True),
         }
-        super().__init__(params=params, loss_fn=loss_fn, **base_kwargs)
-        self.lr = lr
-        self.amsgrad = amsgrad
+        super().__init__(
+            optimizer=optimizer,
+            loss_fn=loss_fn,
+            writer=writer,
+            **base_kwargs,
+        )
         self.kwargs = kwargs
 
-    def optimize(self, model: Model, data: Data) -> Params:
+    def train(self, model: Model, train_data: Data, valid_data: Data) -> float:
         """
         Optimize the parameters of a model using the Adam/Amsgrad algorithm.
 
         Args:
             model (Model): The model to optimize.
-            data (Data): The data used to optimize the model.
+            train_data (Data): The data used to train the model.
+            valid_data (Data): The data used to validate the model.
 
         Returns:
-            Params: The optimized parameters.
+            float: Final loss.
         """
 
-        opt = torch.optim.Adam(
-            params=self.params,
-            lr=self.lr,
-            amsgrad=self.amsgrad,
-            **self.kwargs,
-        )
+        self._model = Model
+        self._train_data = train_data
 
-        params = self.params
         prev_loss = None
         stag_counter = 0
-        best_params = params
+        best_params = model.parameters()
         best_loss = float("inf")
         for epoch in range(self.num_epochs):
-            total_loss = 0.0
-            total_size = 0
-            for batch_X, batch_Y in data:
-                opt.zero_grad()
-                Nx = batch_X.size(0)
-                pred = torch.stack([model(batch_X[k], params) for k in range(Nx)])
-                loss = self.loss_fn(pred, batch_Y)
-                loss.backward()
-                opt.step()
+            total_loss, total_size = self._train_epoch(epoch)
+            train_loss = total_loss / total_size
 
-                total_loss += loss.item() * Nx
-                total_size += Nx
+            vloss_total = 0.0
+            vsize_total = 0
+            for vdata in valid_data:
+                vinputs, vlabels = vdata
+                voutputs = model(vinputs)
+                vsize = len(vinputs)
+                vloss = self.loss_fn(voutputs, vlabels)
+                vloss_total += vloss.item() * vsize
+                vsize_total += vsize
+            vloss = vloss_total / vsize_total
 
-            loss_val = total_loss / total_size
             if self.best_loss:
-                if loss_val < best_loss:
-                    best_loss = loss_val
-                    best_params = [
-                        t.detach().clone().requires_grad_(t.requires_grad)
-                        for t in params
-                    ]
-            if loss_val <= self.opt_stop:
+                if vloss < best_loss:
+                    best_loss = vloss
+                    best_params = model.state_dict().copy()
+
+            if vloss <= self.opt_stop:
                 break
 
             if prev_loss is not None:
-                loss_delta = (prev_loss - loss_val) / prev_loss
+                loss_delta = (prev_loss - vloss) / prev_loss
 
                 if loss_delta < self.stagnation_threshold:
                     stag_counter += 1
@@ -169,7 +171,7 @@ class AdamTorch(Optimizer[Params, Loss, Model, Data]):
 
                 if stag_counter >= self.stagnation_count:
                     warnings.warn(
-                        f"ADAM: Stopping early at epoch {epoch}, loss not improving.\n"
+                        f"Stopping early at epoch {epoch}, loss not improving.\n"
                         f"loss_delta ({loss_delta}) smaller "
                         f"than threshold ({self.stagnation_threshold}) "
                         f"for more than {self.stagnation_count} iterations."
@@ -177,6 +179,36 @@ class AdamTorch(Optimizer[Params, Loss, Model, Data]):
 
                     break
 
-            prev_loss = loss_val
+            prev_loss = vloss
 
-        return best_params
+            self.writer.add_scalars(
+                "Training vs. validation loss",
+                {"Training": train_loss, "Validation": vloss},
+                epoch,
+            )
+
+        final = vloss
+        if self.best_loss:
+            final = best_loss
+            model.load_state_dict(best_params)
+
+        return final
+
+    def _train_epoch(self, epoch: int) -> Tuple[float, int]:
+        running_loss = 0.0
+        total_size = 0
+        for i, data in enumerate(self._train_data):
+            inputs, labels = data
+            self.optimizer.zero_grad()
+            outputs = self._model(inputs)
+            loss = self.loss_fn(outputs, labels)
+            loss.backward()
+            self.optimizer.step()
+
+            Nx = len(inputs)
+            running_loss += loss.item() * Nx
+            total_size += Nx
+            idx = epoch * len(self._train_data) + i + 1
+            self.writer.add_scalar("Loss/train", loss.item(), idx)
+
+        return running_loss, total_size

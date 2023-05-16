@@ -34,7 +34,7 @@ class TestFunctions(unittest.TestCase):
 
         loss_fn = torch.nn.MSELoss()
         params = [torch.tensor([1.0, 1.0, 1.0], requires_grad=True)]
-        opt = AdamTorch(params, loss_fn, opt_steps=20)
+        opt = AdamTorch(params, loss_fn, num_epochs=20)
 
         shattered = check_shattering(model, datagen, opt, d, gamma)
         self.assertTrue(shattered)
@@ -58,7 +58,7 @@ class TestFunctions(unittest.TestCase):
 
         loss_fn = torch.nn.MSELoss()
         params = [torch.tensor([1.0, 1.0, 1.0], requires_grad=True)]
-        opt = AdamTorch(params, loss_fn, opt_steps=20)
+        opt = AdamTorch(params, loss_fn, num_epochs=20)
 
         params = [torch.tensor([1.0, 2.0, 3.0])]
         fat_shattering_dimension = fat_shattering_dim(
@@ -84,7 +84,7 @@ class TestFunctions(unittest.TestCase):
         loss_fn = torch.nn.MSELoss()
         params = [torch.zeros(sizex + 1, requires_grad=True)]
         opt = AdamTorch(
-            params, loss_fn, opt_steps=500, opt_stop=1e-18, stagnation_count=500
+            params, loss_fn, num_epochs=500, opt_stop=1e-18, stagnation_count=500
         )
 
         params = [torch.tensor([1.0, 2.0, 3.0])]

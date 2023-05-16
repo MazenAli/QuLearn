@@ -79,9 +79,9 @@ def parse_args():
         help="Use amsgrad",
     )
     parser.add_argument(
-        "--opt_steps",
+        "--num_epochs",
         type=int,
-        default=config["opt_steps"],
+        default=config["num_epochs"],
         help="Number of optimization steps",
     )
     parser.add_argument(
@@ -180,7 +180,7 @@ def main(args):
         loss_fn=loss_fn,
         lr=args.lr,
         amsgrad=args.amsgrad,
-        opt_steps=args.opt_steps,
+        num_epochs=args.num_epochs,
         opt_stop=args.opt_stop,
         stagnation_threshold=args.stagnation_threshold,
         stagnation_count=args.stagnation_count,
@@ -215,7 +215,7 @@ def main(args):
         "num_params": num_params,
         "num_data_samples": num_data_samples,
         "num_sigma_samples": num_sigma_samples,
-        "opt_steps": args.opt_steps,
+        "num_epochs": args.num_epochs,
         "opt_stop": args.opt_stop,
         "seed": seed,
         "rademacher": rad_compl.item(),

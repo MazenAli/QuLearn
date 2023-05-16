@@ -7,15 +7,19 @@ except ImportError:
 import torch
 import pennylane as qml
 
+from .datagen import DataGenRademacher
 from .loss import RademacherLoss
 from .optimize import Optimizer
 
 Model: TypeAlias = qml.QNode
 Tensor: TypeAlias = torch.Tensor
 Opt: TypeAlias = Optimizer
+Datagen: TypeAlias = DataGenRademacher
 
 
-def rademacher(model: Model, opt: Opt, X: Tensor, sigmas: Tensor) -> Tensor:
+def rademacher(
+    model: Model, opt: Opt, X: Tensor, sigmas: Tensor, datagen: Datagen
+) -> Tensor:
     """
     Estimate Rademacher complexity of a given model.
 
@@ -24,6 +28,7 @@ def rademacher(model: Model, opt: Opt, X: Tensor, sigmas: Tensor) -> Tensor:
         opt (Opt): Optimization class.
         X (Tensor): Data tensor of size (num_data_samples, size_data_set, dim_feature)
         sigmas (Tensor): Sigmas tensor of size (num_sigma_samples, size_data_set)
+        datagen (Datagen): Datagen object for converting to loader.
 
     Returns:
         Tensor: Scalar-valued tensor with Rademacher complexity.
@@ -31,8 +36,8 @@ def rademacher(model: Model, opt: Opt, X: Tensor, sigmas: Tensor) -> Tensor:
 
     num_data_samples = X.shape[0]
     num_sigma_samples = sigmas.shape[0]
-    d = len(X[0])
-    Y = torch.zeros(d, device=X.device)
+    d = X[0].size(0)
+    data = {"X": X, "sigmas": sigmas}
 
     sum = torch.tensor([0.0], requires_grad=False, device=X.device)
     for m in range(num_data_samples):
@@ -41,9 +46,9 @@ def rademacher(model: Model, opt: Opt, X: Tensor, sigmas: Tensor) -> Tensor:
             sigmas_ = sigmas[s]
             loss_fn = RademacherLoss(sigmas_)
             opt.loss_fn = loss_fn
-            data_opt = {"X": X_, "Y": Y}
+            loader = datagen.data_to_loader(data, m)
 
-            params = opt.optimize(model, data_opt)
+            params = opt.optimize(model, loader)
             predictions = torch.stack([model(X_[k], params) for k in range(d)])
 
             sum += -loss_fn(predictions)

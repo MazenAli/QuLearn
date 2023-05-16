@@ -7,7 +7,7 @@ num_sigma_samples: 10
 num_data_samples: 5
 lr: 0.1
 amsgrad: true
-opt_steps: 300
+num_epochs: 300
 opt_stop: 1e-16
 stagnation_threshold: 0.01
 stagnation_count: 100

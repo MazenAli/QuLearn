@@ -18,7 +18,7 @@ def main():
             "omega": 0.0,
             "Sb": 10,
             "Sr": 3,
-            "opt_steps": 500,
+            "num_epochs": 500,
             "opt_stop": 1e-16,
             "stagnation_threshold": 0.01,
             "stagnation_count": 100,

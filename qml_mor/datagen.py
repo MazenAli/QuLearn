@@ -8,6 +8,7 @@ except ImportError:
 
 from abc import ABC, abstractmethod
 import torch
+from torch.utils.data import TensorDataset, DataLoader
 import numpy as np
 from itertools import product
 from scipy.stats import qmc
@@ -15,15 +16,21 @@ from scipy.stats import qmc
 Tensor: TypeAlias = torch.Tensor
 Array: TypeAlias = np.ndarray
 Device: TypeAlias = torch.device
-DataOut = Dict[str, Tensor]
+DataOut: TypeAlias = Dict[str, Tensor]
+Loader: TypeAlias = DataLoader
 D = TypeVar("D")
+L = TypeVar("L")
 
 
-class DataGenTorch(ABC, Generic[D]):
+class DataGenTorch(ABC, Generic[D, L]):
     """
     Abstract base class for generating data in PyTorch.
 
     Args:
+        batch_size (int, optional): Size of batch for data loader.
+            Defaults to None (batch mode).
+        shuffle (bool, optional): Shuffle data in loader.
+            Defaults to False.
         seed (int, optional): The seed used to initialize the
             random number generator. Defaults to None.
         device (Device, optional): The device where to run the computations.
@@ -31,9 +38,15 @@ class DataGenTorch(ABC, Generic[D]):
     """
 
     def __init__(
-        self, seed: Optional[int] = None, device: Device = torch.device("cpu")
+        self,
+        batch_size: Optional[int] = None,
+        shuffle: bool = False,
+        seed: Optional[int] = None,
+        device: Device = torch.device("cpu"),
     ) -> None:
-        self.__seed = seed
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.seed = seed
         self.device = device
 
     @abstractmethod
@@ -46,44 +59,51 @@ class DataGenTorch(ABC, Generic[D]):
         """
         pass
 
-    @property
-    def seed(self) -> Optional[int]:
+    @abstractmethod
+    def data_to_loader(self, *args, **kwarsg) -> L:
         """
-        Get the seed used to initialize the random number generator.
+        Convert data from gen_data to pytorch data loader.
 
         Returns:
-            int: The seed used to initialize the random number generator.
+            L: Data loader.
         """
-
-        return self.__seed
-
-    @seed.setter
-    def seed(self, seed_: int) -> None:
-        """
-        Set the seed used to initialize the random number generator.
-
-        Args:
-            seed_ (int): The seed used to initialize the random number generator.
-        """
-
-        self.__seed = seed_
+        pass
 
 
-class PriorTorch(DataGenTorch[D]):
+class PriorTorch(ABC, Generic[D]):
     """
     Abstract base class for generating priors in PyTorch.
 
     Args:
         sizex (int): Dimension of feature space.
-        kwargs: Keyword arguments passed to the base class.
+        seed (int, optional): The seed used to initialize the
+            random number generator. Defaults to None.
+        device (Device, optional): The device where to run the computations.
+            Defaults to torch.device("cpu").
     """
 
-    def __init__(self, sizex: int, **kwargs) -> None:
-        super().__init__(**kwargs)
+    def __init__(
+        self,
+        sizex: int,
+        seed: Optional[int] = None,
+        device: Device = torch.device("cpu"),
+    ) -> None:
         self.sizex = sizex
+        self.seed = seed
+        self.device = device
+
+    @abstractmethod
+    def gen_data(self, *args, **kwargs) -> D:
+        """
+        Generate the data.
+
+        Returns:
+            D: The generated data.
+        """
+        pass
 
 
-class DataGenCapacity(DataGenTorch[DataOut]):
+class DataGenCapacity(DataGenTorch[DataOut, Loader]):
     """
     Generates data for capacity estimation.
 
@@ -138,8 +158,58 @@ class DataGenCapacity(DataGenTorch[DataOut]):
 
         return data
 
+    def data_to_loader(self, data: DataOut, s: int) -> Loader:
+        """
+        Convert data to pytorch loader.
 
-class DataGenFat(DataGenTorch[DataOut]):
+        Args:
+            data (DataOut): Output of gen_data.
+            s (int): Current label sample.
+
+        Returns:
+            Loader: Pytorch data loader.
+
+        Raises:
+            ValueError: For invalid data or index s.
+        """
+        self._check_data(data)
+
+        Ny = data["Y"].size(0)
+        if s < 0 or s >= Ny:
+            raise ValueError(f"Index i ({s}) must be between 0 and Ny ({Ny}).")
+
+        X = data["X"]
+        Y = data["Y"][s]
+        Nx = X.size(0)
+        dataset = TensorDataset(X, Y)
+        batch_size = Nx
+        if self.batch_size is not None:
+            batch_size = self.batch_size
+
+        loader = DataLoader(dataset, batch_size=batch_size, shuffle=self.shuffle)
+
+        return loader
+
+    def _check_data(self, data: DataOut):
+        if "X" not in data:
+            raise ValueError("Data does not contain X key")
+
+        if "Y" not in data:
+            raise ValueError("Data does not contain Y key")
+
+        X = data["X"]
+        Y = data["Y"]
+
+        check = len(X.shape)
+        if check != 2:
+            raise ValueError(f"X must be 2-dim (not {check})")
+
+        check = len(Y.shape)
+        if len(Y.shape) != 2:
+            raise ValueError(f"Y must be 2-dim (not {check})")
+
+
+class DataGenFat(DataGenTorch[DataOut, Loader]):
     """
     Generates data for estimating fat shattering dimension.
 
@@ -189,8 +259,62 @@ class DataGenFat(DataGenTorch[DataOut]):
 
         return data
 
+    def data_to_loader(self, data: DataOut, sr: int, sb: int) -> Loader:
+        """
+        Convert data to pytorch loader.
 
-class DataGenRademacher(DataGenTorch[DataOut]):
+        Args:
+            data (DataOut): Output of gen_data.
+            sr (int): Current r sample.
+            sb (int): Current b sample.
+
+        Returns:
+            Loader: Pytorch data loader.
+
+        Raises:
+            ValueError: For invalid data or indeces sr or sb.
+        """
+        self._check_data(data)
+
+        Nr = data["Y"].size(0)
+        Nb = data["Y"].size(1)
+        if sr < 0 or sr >= Nr:
+            raise ValueError(f"Index sr ({sr}) must be between 0 and Ny ({Nr}).")
+        if sb < 0 or sb >= Nb:
+            raise ValueError(f"Index sb ({sb}) must be between 0 and Ny ({Nb}).")
+
+        X = data["X"]
+        Nx = X.size(0)
+        Y = data["Y"][sr, sb]
+        dataset = TensorDataset(X, Y)
+        batch_size = Nx
+        if self.batch_size is not None:
+            batch_size = self.batch_size
+
+        loader = DataLoader(dataset, batch_size=batch_size, shuffle=self.shuffle)
+
+        return loader
+
+    def _check_data(self, data: DataOut):
+        if "X" not in data:
+            raise ValueError("Data does not contain X key")
+
+        if "Y" not in data:
+            raise ValueError("Data does not contain Y key")
+
+        X = data["X"]
+        Y = data["Y"]
+
+        check = len(X.shape)
+        if check != 2:
+            raise ValueError(f"X must be 2-dim (not {check})")
+
+        check = len(Y.shape)
+        if check != 3:
+            raise ValueError(f"Y must be 3-dim (not {check})")
+
+
+class DataGenRademacher(DataGenTorch[DataOut, Loader]):
     """
     Generates uniform data for estimating the empirical Rademacher complexity.
 
@@ -243,6 +367,48 @@ class DataGenRademacher(DataGenTorch[DataOut]):
         data = {"X": X, "sigmas": sigmas}
 
         return data
+
+    def data_to_loader(self, data: DataOut, s: int) -> Loader:
+        """
+        Convert data to pytorch loader.
+
+        Args:
+            data (DataOut): Output of gen_data.
+            sr (int): Current X sample.
+
+        Returns:
+            Loader: Pytorch data loader.
+
+        Raises:
+            ValueError: For invalid data or index s.
+        """
+        self._check_data(data)
+
+        Ns = data["X"].size(0)
+        if s < 0 or s >= Ns:
+            raise ValueError(f"Index s ({s}) must be between 0 and Ns ({Ns}).")
+
+        X = data["X"][s]
+        Nx = X.size(0)
+        Y = torch.zeros(Nx, device=X.device)
+        dataset = TensorDataset(X, Y)
+        batch_size = Nx
+        if self.batch_size is not None:
+            batch_size = self.batch_size
+
+        loader = DataLoader(dataset, batch_size=batch_size, shuffle=self.shuffle)
+
+        return loader
+
+    def _check_data(self, data: DataOut):
+        if "X" not in data:
+            raise ValueError("Data does not contain X key")
+
+        X = data["X"]
+        check = len(X.shape)
+
+        if check != 3:
+            raise ValueError(f"X must be 3-dim (not {check})")
 
 
 class UniformPrior(PriorTorch[Tensor]):

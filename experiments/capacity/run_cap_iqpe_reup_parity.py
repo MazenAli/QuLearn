@@ -15,7 +15,7 @@ def main():
             "num_layers": 1,
             "omega": 0.0,
             "num_samples": 10,
-            "opt_steps": 700,
+            "num_epochs": 700,
             "opt_stop": 1e-18,
             "stagnation_threshold": 0.01,
             "stagnation_count": 100,

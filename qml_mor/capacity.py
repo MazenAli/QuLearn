@@ -93,8 +93,8 @@ def fit_rand_labels(model: Model, datagen: Datagen, opt: Opt, N: int) -> float:
 
     mre_sample = []
     for s in range(datagen.num_samples):
-        data_opt = {"X": X, "Y": Y[s]}
-        params = opt.optimize(model, data_opt)
+        loader = datagen.data_to_loader(data, s)
+        params = opt.optimize(model, loader)
         y_pred = torch.stack([model(X[k], params) for k in range(N)])
         mre = torch.mean(torch.abs((Y[s] - y_pred) / y_pred))
         mre_sample.append(mre.item())

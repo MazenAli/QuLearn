@@ -9,29 +9,31 @@ except ImportError:
 from abc import ABC, abstractmethod
 import warnings
 import torch
+from torch.utils.tensorboard import SummaryWriter
+from torch.utils.data import DataLoader
 import pennylane as qml
 
 
 Tensor: TypeAlias = torch.Tensor
 Loss: TypeAlias = torch.nn.Module
 Optimizer: TypeAlias = torch.optim.Optimizer
-Writer: TypeAlias = torch.utils.tensorboard.writer.SummaryWriter
+Writer: TypeAlias = SummaryWriter
 Model: TypeAlias = qml.QNode
 Params = Iterable[Tensor]
-Data: TypeAlias = torch.utils.data.DataLoader
-Op = TypeVar("Op")
+Data: TypeAlias = DataLoader
+T = TypeVar("T")
 W = TypeVar("W")
 L = TypeVar("L")
 M = TypeVar("M")
 D = TypeVar("D")
 
 
-class Optimize(ABC, Generic[Op, L, W, M, D]):
+class Optimize(ABC, Generic[T, L, W, M, D]):
     """
     Abstract base class for optimizing model parameters.
 
     Args:
-        optimizer (Op): Optimizer for updating parameters.
+        optimizer (T): Optimizer for updating parameters.
         loss_fn (L): Loss function to minimize.
         writer (W): Writer for logging.
         num_epochs (int): Maximum number of epochs.
@@ -45,7 +47,7 @@ class Optimize(ABC, Generic[Op, L, W, M, D]):
 
     def __init__(
         self,
-        optimizer: Op,
+        optimizer: T,
         loss_fn: L,
         writer: W,
         num_epochs: int,

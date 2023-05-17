@@ -9,6 +9,7 @@ except ImportError:
     from typing_extensions import TypeAlias
 
 import torch
+from torch.nn import ParameterList
 from torch.nn import Module
 import pennylane as qml
 
@@ -31,6 +32,11 @@ class QNNModel(Module, Generic[X, P, E, Pr, S]):
 
     def __init__(self) -> None:
         super().__init__()
+
+    @abstractmethod
+    def forward(self, x: X) -> E:
+        """Forward model evaluation."""
+        pass
 
     @abstractmethod
     def expectation(self, x: X, params: P) -> E:
@@ -81,7 +87,7 @@ class IQPEReuploadSU2Parity(
     ) -> None:
         super().__init__()
         self.qdevice = qdevice
-        self.weights = params
+        self.params = ParameterList(params)
         self.omega = omega
         self.model_type = model_type
         self._check_model_type()
@@ -103,10 +109,10 @@ class IQPEReuploadSU2Parity(
             qnode = qml.QNode(self.sample, self.qdevice, interface="torch")
 
         if len(X.shape) == 1:
-            out = qnode(X, self.weights)
+            out = qnode(X, self.params)
         else:
             Nx = X.size(0)
-            out = torch.stack([qnode(X[k], self.weights) for k in range(Nx)])
+            out = torch.stack([qnode(X[k], self.params) for k in range(Nx)])
 
         return out
 

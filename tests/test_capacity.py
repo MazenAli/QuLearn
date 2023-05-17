@@ -5,7 +5,7 @@ import pennylane as qml
 from qml_mor.models import IQPEReuploadSU2Parity, LinearModel
 from qml_mor.capacity import capacity, fit_rand_labels
 from qml_mor.datagen import DataGenCapacity
-from qml_mor.optimize import AdamTorch
+from qml_mor.trainer import AdamTorch
 
 
 class TestCapacity(unittest.TestCase):

@@ -1,4 +1,4 @@
-from typing import Iterable, Generic, TypeVar, Tuple
+from typing import Iterable, Generic, TypeVar, Tuple, Optional
 
 # for python < 3.10
 try:
@@ -8,6 +8,7 @@ except ImportError:
 
 from abc import ABC, abstractmethod
 import warnings
+from datetime import datetime
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
@@ -28,7 +29,7 @@ M = TypeVar("M")
 D = TypeVar("D")
 
 
-class Optimize(ABC, Generic[T, L, W, M, D]):
+class Trainer(ABC, Generic[T, L, W, M, D]):
     """
     Abstract base class for optimizing model parameters.
 
@@ -43,6 +44,7 @@ class Optimize(ABC, Generic[T, L, W, M, D]):
             smaller than this for stagnation_count times, stop.
         stagnation_count (int): See stagnation_threshold.
         best_loss (bool): Return parameters corresponding to best loss value.
+        file_name (str): Name of file to save best parameters.
     """
 
     def __init__(
@@ -55,6 +57,7 @@ class Optimize(ABC, Generic[T, L, W, M, D]):
         stagnation_threshold: float,
         stagnation_count: int,
         best_loss: bool,
+        file_name: str,
     ) -> None:
         self.optimizer = optimizer
         self.loss_fn = loss_fn
@@ -64,6 +67,7 @@ class Optimize(ABC, Generic[T, L, W, M, D]):
         self.stagnation_threshold = stagnation_threshold
         self.stagnation_count = stagnation_count
         self.best_loss = best_loss
+        self.file_name = file_name
 
     @abstractmethod
     def train(self, model: M, train_data: D, valid_data: D) -> float:
@@ -81,14 +85,15 @@ class Optimize(ABC, Generic[T, L, W, M, D]):
         pass
 
 
-class VanillaTorchOptimize(Optimize[Optimizer, Loss, Writer, Model, Data]):
+class RegressionTrainer(Trainer[Optimizer, Loss, Optional[Writer], Model, Data]):
     """
     Wrapper for torch Adam.
 
     Args:
         optimizer (Optimizer): Torch optimizer.
         loss_fn (Loss): Loss function to minimize.
-        writer (Writer): Tensorboard writer for logging.
+        writer (Writer, optional): Tensorboard writer for logging.
+            Defaults to None.
         kwargs: Additional keyword arguments for base class.
             For Optimizer:
                 - num_epochs (int, optional): Defaults to 300.
@@ -102,7 +107,7 @@ class VanillaTorchOptimize(Optimize[Optimizer, Loss, Writer, Model, Data]):
         self,
         optimizer: Optimizer,
         loss_fn: Loss,
-        writer: Writer,
+        writer: Optional[Writer] = None,
         **kwargs,
     ) -> None:
         base_kwargs = {
@@ -111,6 +116,7 @@ class VanillaTorchOptimize(Optimize[Optimizer, Loss, Writer, Model, Data]):
             "stagnation_threshold": kwargs.pop("stagnation_threshold", 1e-02),
             "stagnation_count": kwargs.pop("stagnation_count", 100),
             "best_loss": kwargs.pop("best_loss", True),
+            "file_name": kwargs.pop("file_name", "model"),
         }
         super().__init__(
             optimizer=optimizer,
@@ -133,16 +139,19 @@ class VanillaTorchOptimize(Optimize[Optimizer, Loss, Writer, Model, Data]):
             float: Final loss.
         """
 
-        self._model = Model
+        self._model = model
         self._train_data = train_data
 
         prev_loss = None
         stag_counter = 0
-        best_params = model.parameters()
-        best_loss = float("inf")
+        best_tparams = model.state_dict().copy()
+        best_vparams = model.state_dict().copy()
+        best_tepoch = -1
+        best_vepoch = -1
+        best_vloss = float("inf")
+        best_tloss = float("inf")
         for epoch in range(self.num_epochs):
-            total_loss, total_size = self._train_epoch(epoch)
-            train_loss = total_loss / total_size
+            tloss, mre = self._train_epoch(epoch)
 
             vloss_total = 0.0
             vsize_total = 0
@@ -156,15 +165,21 @@ class VanillaTorchOptimize(Optimize[Optimizer, Loss, Writer, Model, Data]):
             vloss = vloss_total / vsize_total
 
             if self.best_loss:
-                if vloss < best_loss:
-                    best_loss = vloss
-                    best_params = model.state_dict().copy()
+                if vloss < best_vloss:
+                    best_vloss = vloss
+                    best_vepoch = epoch
+                    best_vparams = model.state_dict().copy()
 
-            if vloss <= self.opt_stop:
+                if tloss < best_tloss:
+                    best_tloss = tloss
+                    best_tepoch = epoch
+                    best_tparams = model.state_dict().copy()
+
+            if tloss <= self.opt_stop:
                 break
 
             if prev_loss is not None:
-                loss_delta = (prev_loss - vloss) / prev_loss
+                loss_delta = (prev_loss - tloss) / prev_loss
 
                 if loss_delta < self.stagnation_threshold:
                     stag_counter += 1
@@ -181,23 +196,30 @@ class VanillaTorchOptimize(Optimize[Optimizer, Loss, Writer, Model, Data]):
 
                     break
 
-            prev_loss = vloss
+            prev_loss = tloss
 
-            self.writer.add_scalars(
-                "Training vs. validation loss",
-                {"Training": train_loss, "Validation": vloss},
-                epoch,
-            )
+            if self.writer is not None:
+                self.writer.add_scalars(
+                    "loss", {"training": tloss, "valiadation": vloss}, epoch
+                )
+                self.writer.add_scalar("mre", mre, epoch)
 
-        final = vloss
+        final = tloss
         if self.best_loss:
-            final = best_loss
-            model.load_state_dict(best_params)
+            final = best_tloss
+
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            model.load_state_dict(best_tparams)
+            model_patht = f"{self.file_name}_besttrain_{timestamp}_{best_tepoch}"
+            model_pathv = f"{self.file_name}_bestval_{timestamp}_{best_vepoch}"
+            torch.save(best_tparams, model_patht)
+            torch.save(best_vparams, model_pathv)
 
         return final
 
-    def _train_epoch(self, epoch: int) -> Tuple[float, int]:
-        running_loss = 0.0
+    def _train_epoch(self, epoch: int) -> Tuple[float, float]:
+        total_loss = 0.0
+        mre = 0.0
         total_size = 0
         for i, data in enumerate(self._train_data):
             inputs, labels = data
@@ -208,9 +230,12 @@ class VanillaTorchOptimize(Optimize[Optimizer, Loss, Writer, Model, Data]):
             self.optimizer.step()
 
             Nx = len(inputs)
-            running_loss += loss.item() * Nx
+            total_loss += loss.item() * Nx
+            mre_ = torch.mean(torch.abs((outputs - labels) / labels)) * Nx
+            mre += mre_.item()
             total_size += Nx
-            idx = epoch * len(self._train_data) + i + 1
-            self.writer.add_scalar("Loss/train", loss.item(), idx)
 
-        return running_loss, total_size
+        total_loss /= total_size
+        mre /= total_size
+
+        return total_loss, mre

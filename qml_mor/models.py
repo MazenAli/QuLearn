@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, TypeVar, Generic, Dict
+from enum import Enum
 import math
 
 # for python < 3.10
@@ -9,7 +10,7 @@ except ImportError:
     from typing_extensions import TypeAlias
 
 import torch
-from torch.nn import ParameterList
+from torch.nn import Parameter
 from torch.nn import Module
 import pennylane as qml
 
@@ -21,61 +22,41 @@ Probability: TypeAlias = qml.measurements.ProbabilityMP
 Sample: TypeAlias = qml.measurements.SampleMP
 X = TypeVar("X")
 P = TypeVar("P")
-Y = TypeVar("Y")
-E = TypeVar("E")
-Pr = TypeVar("Pr")
-S = TypeVar("S")
+T = TypeVar("T")
 
 
-class QNNModel(Module, Generic[X, P, E, Pr, S]):
+class ModelType(Enum):
+    Expectation = "expectation"
+    Probabilities = "probabilities"
+    Samples = "samples"
+
+
+class QNNModel(Module, Generic[X, T]):
     """Base class for a quantum neural network model."""
 
     def __init__(self) -> None:
         super().__init__()
 
     @abstractmethod
-    def forward(self, x: X) -> E:
+    def forward(self, x: X) -> T:
         """Forward model evaluation."""
         pass
 
-    @abstractmethod
-    def expectation(self, x: X, params: P) -> E:
-        """Constructs an expectation object for a given input and parameters."""
-        pass
 
-    def qfunction(self, x: X, params: P) -> E:
-        """By default, the quantum function is the expectation process."""
-        return self.expectation(x, params)
-
-    @abstractmethod
-    def probabilities(self, x: X, params: P) -> Pr:
-        """Constructs a probability object for a given input and parameters."""
-        pass
-
-    @abstractmethod
-    def sample(self, x: X, params: P) -> S:
-        """Constructs a sample object for a given input and parameters."""
-        pass
-
-    @abstractmethod
-    def outcome_probs(self, probs: Dict[str, float], params: P) -> Dict[float, float]:
-        """Dictionary of outcomes with probabilities."""
-        pass
-
-
-class IQPEReuploadSU2Parity(
-    QNNModel[Tensor, List[Tensor], Expectation, Probability, Sample]
-):
+class IQPEReuploadSU2Parity(QNNModel[Tensor, Tensor]):
     """
     An IQP embedding circuit with additional SU(2) gates and parity measurements.
 
     Args:
         qdevice (QDevice): Quantum device.
-        params (List[Tensor]): List of initiial parameters.
+        params (List[Tensor]): List of initiial parameters, 3 tensors.
         omega (float, optional): The exponential feature scaling factor.
             Defaults to 0.0.
-        model_type (str, optional): Specify type of model as "expectation",
-            "probabilities", or "samples". Defaults to "expectation".
+        model_type (ModelType, optional): Specify type of model.
+            Defaults to Expectation.
+
+    Raises:
+        ValueError: If params or model_type of invalid form.
     """
 
     def __init__(
@@ -83,14 +64,18 @@ class IQPEReuploadSU2Parity(
         qdevice: QDevice,
         params: List[Tensor],
         omega: float = 0.0,
-        model_type: str = "expectation",
+        model_type: ModelType = ModelType.Expectation,
     ) -> None:
         super().__init__()
+        self._check_model_type(model_type)
+        self._check_params(params)
+
         self.qdevice = qdevice
-        self.params = ParameterList(params)
+        self.init_theta = Parameter(params[0])
+        self.theta = Parameter(params[1])
+        self.W = Parameter(params[2])
         self.omega = omega
         self.model_type = model_type
-        self._check_model_type()
 
     def forward(self, X: Tensor) -> Tensor:
         """
@@ -101,126 +86,80 @@ class IQPEReuploadSU2Parity(
             X (Tensor): Input tensor of dimension (dimX,) or (num_samples, dimX).
         """
 
-        if self.model_type == "expectation":
+        if self.model_type == ModelType.Expectation:
             qnode = qml.QNode(self.expectation, self.qdevice, interface="torch")
-        elif self.model_type == "probabilities":
+        elif self.model_type == ModelType.Probabilities:
             qnode = qml.QNode(self.probabilities, self.qdevice, interface="torch")
-        elif self.model_type == "samples":
+        elif self.model_type == ModelType.Samples:
             qnode = qml.QNode(self.sample, self.qdevice, interface="torch")
 
         if len(X.shape) == 1:
-            out = qnode(X, self.params)
+            out = qnode(X, self.parameters())
         else:
             Nx = X.size(0)
-            out = torch.stack([qnode(X[k], self.params) for k in range(Nx)])
+            out = torch.stack([qnode(X[k]) for k in range(Nx)])
 
         return out
 
-    def expectation(self, x: Tensor, params: List[Tensor]) -> Expectation:
+    def expectation(self, x: Tensor) -> Expectation:
         """
         Returns the expectation value circuit of the Hamiltonian of the circuit given
         the input features and the parameters.
 
         Args:
             x (Tensor): The input features for the circuit of dimension (num_qubits,).
-            params (List[Tensor]): The parameters for the circuit. Must be a list of
-                three tensors: the initial thetas, the main thetas, and the weights W.
 
         Returns:
             Expectation: The expectation value of the Hamiltonian of the circuit.
-
-        Raises:
-            ValueError: If the length of params is not 3.
         """
+        H = self.Hamiltonian()
 
-        if len(params) != 3:
-            raise ValueError("Parameters must be a list of 3 tensors")
+        return iqpe_reupload_su2_expectation(
+            x, self.init_theta, self.theta, H, self.omega
+        )
 
-        init_theta = params[0]
-        theta = params[1]
-        H = self.Hamiltonian(params)
-
-        return iqpe_reupload_su2_expectation(x, init_theta, theta, H, self.omega)
-
-    def probabilities(self, x: Tensor, params: List[Tensor]) -> Probability:
+    def probabilities(self, x: Tensor) -> Probability:
         """
         Returns the probabilities of measurements for the circuit given
         the input features and the parameters.
 
         Args:
             x (Tensor): The input features for the circuit of dimension (num_qubits,).
-            params (List[Tensor]): The parameters for the circuit. Must be a list of
-                three tensors: the initial thetas, the main thetas, and the weights W.
 
         Returns:
             Probability: The measurement probabilities of the circuit.
-
-        Raises:
-            ValueError: If the length of params is not at least 2.
         """
 
-        if len(params) <= 2:
-            raise ValueError("Parameters must be a list of at least 2 tensors")
+        return iqpe_reupload_su2_probs(x, self.init_theta, self.theta, self.omega)
 
-        init_theta = params[0]
-        theta = params[1]
-
-        return iqpe_reupload_su2_probs(x, init_theta, theta, self.omega)
-
-    def sample(self, x: Tensor, params: List[Tensor]) -> Sample:
+    def sample(self, x: Tensor) -> Sample:
         """
         Returns the samples of measurements for the circuit given
         the input features and the parameters.
 
         Args:
             x (Tensor): The input features for the circuit of dimension (num_qubits,).
-            params (List[Tensor]): The parameters for the circuit. Must be a list of
-                three tensors: the initial thetas, the main thetas, and the weights W.
 
         Returns:
             Sample: The measurement samples of the circuit.
-
-        Raises:
-            ValueError: If the length of params is not at least 2.
         """
 
-        if len(params) <= 2:
-            raise ValueError("Parameters must be a list of at least 2 tensors")
+        return iqpe_reupload_su2_sample(x, self.init_theta, self.theta, self.omega)
 
-        init_theta = params[0]
-        theta = params[1]
-
-        return iqpe_reupload_su2_sample(x, init_theta, theta, self.omega)
-
-    def Hamiltonian(self, params: List[Tensor]) -> Observable:
+    def Hamiltonian(self) -> Observable:
         """
         Hamiltonian corresponding to the parity of Pauli Z operators.
 
-        Args:
-            params (List[Tensor]): The parameters for the circuit. Must be a list of
-                three tensors: the initial thetas, the main thetas, and the weights W.
-
         Returns:
             Observable: Observable corresponding to the parity of Pauli Z operators
-
-        Raises:
-            ValueError: If shape of params or W incorrect.
         """
 
-        if len(params) != 3:
-            raise ValueError("Parameters must be a list of 3 tensors")
-
-        W = params[2]
-        shapeW = W.shape
-        if len(shapeW) != 1:
-            raise ValueError(f"W (shape={shapeW}) must be a 1-dim tensor")
-
-        num_qubits = math.log2(len(W))
+        num_qubits = math.log2(len(self.W))
         if not num_qubits.is_integer():
             raise ValueError(f"Length of W ({num_qubits}) not a power of 2")
         num_qubits = int(num_qubits)
 
-        H = parity_hamiltonian(num_qubits, W)
+        H = parity_hamiltonian(num_qubits, self.W)
 
         return H
 
@@ -238,22 +177,45 @@ class IQPEReuploadSU2Parity(
             Dict: Values with corresponding probabilities.
         """
 
-        H = self.Hamiltonian(params)
+        H = self.Hamiltonian()
         outcomes = parities_outcome_probs(probs, H)
 
         return outcomes
 
-    def _check_model_type(self):
-        valid_types = ("expectation", "probabilities", "samples")
-        if self.model_type not in valid_types:
-            raise ValueError(f"Invalid model_type, should be one of {valid_types}")
+    def _check_model_type(self, model_type: ModelType) -> None:
+        if not isinstance(model_type, ModelType):
+            raise ValueError(
+                f"Invalid model_type. "
+                f"Expected instance of ModelType, got {type(model_type)}."
+            )
+
+    def _check_params(self, params: List[Tensor]) -> None:
+        length = len(params)
+        if length != 3:
+            raise ValueError(f"params must be a 3-dim tensor (not {length})")
+
+        init_theta = params[0]
+        theta = params[1]
+        W = params[2]
+
+        shape_init = init_theta.shape
+        shape_theta = theta.shape
+        shape_W = W.shape
+        if len(shape_init) != 2:
+            raise ValueError(f"init_theta (shape={shape_init}) must be a 2-dim tensor")
+        if len(shape_theta) != 4:
+            raise ValueError(f"theta (shape={shape_theta}) must be a 4-dim tensor")
+        if shape_theta[3] != 2:
+            raise ValueError(f"Last dimension of theta {shape_theta[3]} should be 2")
+        if len(shape_W) != 1:
+            raise ValueError(f"W (shape={shape_W}) must be a 1-dim tensor")
 
 
-class Model(ABC, Generic[X, P, Y]):
+class Model(ABC, Generic[X, P, T]):
     """Abstract base class for regression models f(x, params)."""
 
     @abstractmethod
-    def __call__(self, x: X, params: P) -> Y:
+    def __call__(self, x: X, params: P) -> T:
         """Abstract method for call."""
         pass
 

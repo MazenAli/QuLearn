@@ -3,7 +3,7 @@ import torch
 import math
 
 from qml_mor.models import LinearModel
-from qml_mor.optimize import AdamTorch
+from qml_mor.trainer import AdamTorch
 from qml_mor.rademacher import rademacher
 from qml_mor.loss import RademacherLoss
 from qml_mor.datagen import NormalPrior, DataGenRademacher

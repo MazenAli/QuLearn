@@ -9,18 +9,18 @@ import torch
 import pennylane as qml
 
 from .datagen import DataGenFat
-from .optimize import Optimizer
+from .trainer import Trainer
 
 Tensor: TypeAlias = torch.Tensor
 Model: TypeAlias = qml.QNode
 Datagen: TypeAlias = DataGenFat
-Opt: TypeAlias = Optimizer
+Tr: TypeAlias = Trainer
 
 
 def fat_shattering_dim(
     model: Model,
     datagen: Datagen,
-    opt: Opt,
+    trainer: Tr,
     dmin: int,
     dmax: int,
     gamma: float = 0.0,
@@ -32,7 +32,7 @@ def fat_shattering_dim(
     Args:
         model (Model): The model.
         datagen (Datagen): The (synthetic) data generator.
-        opt (Opt): The optimizer.
+        trainer (Tr): The trainer.
         dmin (int): Iteration start for dimension check.
         dmax (int): Iteration stop for dimension check (including).
         gamma (float, optional): The margin value.
@@ -47,7 +47,7 @@ def fat_shattering_dim(
     """
 
     for d in range(dmin, dmax + 1, dstep):
-        shattered = check_shattering(model, datagen, opt, d, gamma)
+        shattered = check_shattering(model, datagen, trainer, d, gamma)
 
         if not shattered:
             if d == dmin:
@@ -61,7 +61,7 @@ def fat_shattering_dim(
 
 
 def check_shattering(
-    model: Model, datagen: Datagen, opt: Opt, d: int, gamma: float
+    model: Model, datagen: Datagen, trainer: Tr, d: int, gamma: float
 ) -> bool:
     """
     Check if the model shatters a given dimension d with margin value gamma.
@@ -69,7 +69,7 @@ def check_shattering(
     Args:
         model (Model): The model.
         datagen (Datagen): The (synthetic) data generator.
-        opt (Opt): The optimizer.
+        trainer (Tr): The trainer.
         d (int): Size of data set to shatter.
         gamma (float): The margin value.
 
@@ -87,8 +87,8 @@ def check_shattering(
         shattered = True
         for sb in range(len(b)):
             loader = datagen.data_to_loader(data, sr, sb)
-            params = opt.optimize(model, loader)
-            predictions = torch.stack([model(X[k], params) for k in range(d)])
+            trainer.train(model, loader, loader)
+            predictions = model(X)
 
             for i, pred in enumerate(predictions):
                 if b[sb, i] == 1 and not (pred >= r[sr, i] + gamma):

@@ -4,7 +4,7 @@ import unittest
 from qml_mor.models import LinearModel
 from qml_mor.fat import fat_shattering_dim, check_shattering, normalize_const
 from qml_mor.datagen import DataGenFat, UniformPrior
-from qml_mor.optimize import AdamTorch
+from qml_mor.trainer import AdamTorch
 
 
 class TestFunctions(unittest.TestCase):

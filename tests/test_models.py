@@ -2,7 +2,7 @@ import unittest
 import torch
 import pennylane as qml
 from qml_mor.models import (
-    LinearModel,
+    ModelType,
     IQPEReuploadSU2Parity,
     parity_hamiltonian,
     iqpe_reupload_su2_circuit,
@@ -29,57 +29,49 @@ W = torch.ones(W_SHAPE, requires_grad=True)
 class TestIQPEReuploadSU2Parity(unittest.TestCase):
     def test_omega(self):
         # Test that the getter and setter for omega work correctly
-        model = IQPEReuploadSU2Parity()
-        model.omega = 0.5
+        params = [INIT_THETA, THETA, W]
+        dev = qml.device("default.qubit", wires=NUM_QUBITS, shots=None)
+        model = IQPEReuploadSU2Parity(dev, params, omega=0.5)
         self.assertEqual(model.omega, 0.5)
 
     def test_qfunction(self):
         # Test that the qfunction returns a PennyLane Expectation object
-        model = IQPEReuploadSU2Parity()
-        output = model.qfunction(X, [INIT_THETA, THETA, W])
+        params = [INIT_THETA, THETA, W]
+        dev = qml.device("default.qubit", wires=NUM_QUBITS, shots=None)
+        model = IQPEReuploadSU2Parity(dev, params)
+        output = model.expectation(X)
         self.assertIsInstance(output, qml.measurements.ExpectationMP)
 
     def test_probs(self):
         # Test that the qfunction returns a PennyLane Probability object
-        model = IQPEReuploadSU2Parity()
-        output = model.probabilities(X, [INIT_THETA, THETA, W])
+        dev = qml.device("default.qubit", wires=NUM_QUBITS, shots=None)
+        params = [INIT_THETA, THETA, W]
+        model = IQPEReuploadSU2Parity(dev, params, model_type=ModelType.Probabilities)
+        output = model.probabilities(X)
         self.assertIsInstance(output, qml.measurements.ProbabilityMP)
 
     def test_qfunction_output(self):
         # Test that the qfunction is equal to 8 on a trivial zero input
-        model = IQPEReuploadSU2Parity()
         dev = qml.device("default.qubit", wires=NUM_QUBITS, shots=None)
-
-        @qml.qnode(dev, interface="torch")
-        def circuit(x, params):
-            return model.qfunction(x, params)
-
-        output = circuit(X, [INIT_THETA, THETA, W]).item()
+        params = [INIT_THETA, THETA, W]
+        model = IQPEReuploadSU2Parity(dev, params)
+        output = model(X).item()
         self.assertAlmostEqual(output, 8.0)
 
     def test_probs_output(self):
         # Test that the qfunction is equal to 8 on a trivial zero input
-        model = IQPEReuploadSU2Parity()
         dev = qml.device("default.qubit", wires=NUM_QUBITS, shots=None)
-
-        @qml.qnode(dev, interface="torch")
-        def circuit(x, params):
-            return model.probabilities(x, params)
-
-        output = circuit(X, [INIT_THETA, THETA, W])
+        params = [INIT_THETA, THETA, W]
+        model = IQPEReuploadSU2Parity(dev, params, model_type=ModelType.Probabilities)
+        output = model(X)
         self.assertAlmostEqual(output[0].item(), 1.0)
 
     def test_probs_outcome(self):
         # Test that the qfunction is equal to 8 on a trivial zero input
-        model = IQPEReuploadSU2Parity()
         dev = qml.device("default.qubit", wires=NUM_QUBITS, shots=None)
-
-        @qml.qnode(dev, interface="torch")
-        def circuit(x, params):
-            return model.probabilities(x, params)
-
         params = [INIT_THETA, THETA, W]
-        probs = circuit(X, params)
+        model = IQPEReuploadSU2Parity(dev, params, model_type=ModelType.Probabilities)
+        probs = model(X)
         prob_dic = probabilities_to_dictionary(probs)
 
         outcome = model.outcome_probs(prob_dic, params)
@@ -91,34 +83,26 @@ class TestIQPEReuploadSU2Parity(unittest.TestCase):
         def circuit(x, params):
             return model.expectation(x, params)
 
-        expec = circuit(X, params)
+        model = IQPEReuploadSU2Parity(dev, params)
+        expec = model(X)
 
         self.assertAlmostEqual(expec.item(), E.item())
 
     def test_samples_outcome(self):
         # Test that the qfunction is equal to 8 on a trivial zero input
-        model = IQPEReuploadSU2Parity()
         shots = 10
         dev = qml.device("default.qubit", wires=NUM_QUBITS, shots=shots)
-
-        @qml.qnode(dev, interface="torch")
-        def circuit(x, params):
-            return model.sample(x, params)
-
         params = [INIT_THETA, THETA, W]
-        probs = circuit(X, params)
+        model = IQPEReuploadSU2Parity(dev, params, model_type=ModelType.Samples)
+        probs = model(X)
         prob_dic = samples_to_dictionary(probs)
 
         outcome = model.outcome_probs(prob_dic, params)
         E = 0.0
         for val, p in outcome.items():
             E += val * p
-
-        @qml.qnode(dev, interface="torch", shots=shots)
-        def circuit(x, params):
-            return model.expectation(x, params)
-
-        expec = circuit(X, params)
+        model = IQPEReuploadSU2Parity(dev, params, model_type=ModelType.Expectation)
+        expec = model(X)
         self.assertAlmostEqual(expec.item(), E.item())
 
 
@@ -151,28 +135,6 @@ class TestIqpeReuploadSu2Parity(unittest.TestCase):
         # Test that the output of iqpe_reupload_su2_parity is a probability process
         output = iqpe_reupload_su2_probs(X, INIT_THETA, THETA)
         self.assertIsInstance(output, qml.measurements.ProbabilityMP)
-
-
-class TestLinearModel(unittest.TestCase):
-    def test_output_shape(self):
-        # Test that the output of linear model has the correct shape and type
-        model = LinearModel()
-        sizex = 3
-        X = torch.zeros(sizex)
-        P = [torch.zeros(sizex + 1, requires_grad=True)]
-        output = model(X, P)
-        self.assertIsInstance(output, torch.Tensor)
-        self.assertEqual(output.shape, torch.Size([]))
-
-    def test_raises_value_error(self):
-        # Test that iqpe_reupload_su2_parity raises a ValueError for incorrect
-        # input shapes
-        model = LinearModel()
-        sizex = 3
-        X = torch.zeros(sizex)
-        P = [torch.zeros(sizex, requires_grad=True)]
-        with self.assertRaises(ValueError):
-            model(X, P)
 
 
 class TestSequenceGenerator(unittest.TestCase):

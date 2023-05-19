@@ -8,14 +8,14 @@ except ImportError:
 
 import warnings
 import torch
+from torch.nn import Module
 import numpy as np
-import pennylane as qml
 
 from .trainer import Trainer
 from .datagen import DataGenCapacity
 
 Tensor: TypeAlias = torch.Tensor
-Model: TypeAlias = qml.QNode
+Model: TypeAlias = Module
 Datagen: TypeAlias = DataGenCapacity
 Tr: TypeAlias = Trainer
 Capacity = List[Tuple[int, float, int, int]]
@@ -91,10 +91,19 @@ def fit_rand_labels(model: Model, datagen: Datagen, trainer: Tr, N: int) -> floa
     X = data["X"]
     Y = data["Y"]
 
+    path = None
+    if trainer.best_loss:
+        path = f"{trainer.file_name}_bestmre"
+
     mre_sample = []
     for s in range(datagen.num_samples):
         loader = datagen.data_to_loader(data, s)
         trainer.train(model, loader, loader)
+
+        if path is not None:
+            state = torch.load(path)
+            model.load_state_dict(state)
+
         y_pred = model(X)
         mre = torch.mean(torch.abs((Y[s] - y_pred) / y_pred))
         mre_sample.append(mre.item())

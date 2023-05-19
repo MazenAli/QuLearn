@@ -1,4 +1,4 @@
-from typing import Iterable, Generic, TypeVar, Tuple, Optional
+from typing import Iterable, Generic, TypeVar, Optional
 
 # for python < 3.10
 try:
@@ -8,7 +8,6 @@ except ImportError:
 
 from abc import ABC, abstractmethod
 import warnings
-from datetime import datetime
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
@@ -43,7 +42,7 @@ class Trainer(ABC, Generic[T, L, W, M, D]):
         stagnation_threshold (float): If relative reduction in loss
             smaller than this for stagnation_count times, stop.
         stagnation_count (int): See stagnation_threshold.
-        best_loss (bool): Return parameters corresponding to best loss value.
+        best_loss (bool): Save parameters corresponding to best loss value.
         file_name (str): Name of file to save best parameters.
     """
 
@@ -87,20 +86,24 @@ class Trainer(ABC, Generic[T, L, W, M, D]):
 
 class RegressionTrainer(Trainer[Optimizer, Loss, Optional[Writer], Model, Data]):
     """
-    Wrapper for torch Adam.
+    Training on labeled real-valued input and output data.
 
     Args:
-        optimizer (Optimizer): Torch optimizer.
+        optimizer (Optimizer): Optimizer.
         loss_fn (Loss): Loss function to minimize.
-        writer (Writer, optional): Tensorboard writer for logging.
+        writer (Writer, optional): Writer for logging.
             Defaults to None.
-        kwargs: Additional keyword arguments for base class.
-            For Optimizer:
-                - num_epochs (int, optional): Defaults to 300.
-                - opt_stop (float, optional): Defaults to 1e-16.
-                - stagnation_threshold (float, optional): Defaults to 0.01.
-                - stagnation_count (int, optional): Defaults to 100.
-                - best_loss (bool, optional): Defaults to True.
+        num_epochs (int, optional): Defaults to 300.
+        opt_stop (float, optional): Training loss stopping criterion.
+            Defaults to 1e-16.
+        stagnation_threshold (float, optional): Stagnation relative change
+            stopping criterion. Defaults to 0.01.
+        stagnation_count (int, optional): Stagnation length for stopping.
+            Defaults to 100.
+        best_loss (bool, optional): Save best training loss parameters.
+            Defaults to True.
+        file_name (str, optional): Name of file prefix for best parameters.
+            Defaults to "model".
     """
 
     def __init__(
@@ -108,27 +111,29 @@ class RegressionTrainer(Trainer[Optimizer, Loss, Optional[Writer], Model, Data])
         optimizer: Optimizer,
         loss_fn: Loss,
         writer: Optional[Writer] = None,
-        **kwargs,
+        num_epochs: int = 300,
+        opt_stop: float = 1e-16,
+        stagnation_threshold: float = 1e-02,
+        stagnation_count: int = 100,
+        best_loss: bool = True,
+        file_name: str = "model",
     ) -> None:
-        base_kwargs = {
-            "num_epochs": kwargs.pop("num_epochs", 300),
-            "opt_stop": kwargs.pop("opt_stop", 1e-16),
-            "stagnation_threshold": kwargs.pop("stagnation_threshold", 1e-02),
-            "stagnation_count": kwargs.pop("stagnation_count", 100),
-            "best_loss": kwargs.pop("best_loss", True),
-            "file_name": kwargs.pop("file_name", "model"),
-        }
         super().__init__(
             optimizer=optimizer,
             loss_fn=loss_fn,
             writer=writer,
-            **base_kwargs,
+            num_epochs=num_epochs,
+            opt_stop=opt_stop,
+            stagnation_threshold=stagnation_threshold,
+            stagnation_count=stagnation_count,
+            best_loss=best_loss,
+            file_name=file_name,
         )
-        self.kwargs = kwargs
 
     def train(self, model: Model, train_data: Data, valid_data: Data) -> float:
         """
-        Optimize the parameters of a model using the Adam/Amsgrad algorithm.
+        Optimize the parameters of a model, compute training loss, validation loss and
+        validation mre.
 
         Args:
             model (Model): The model to optimize.
@@ -136,7 +141,7 @@ class RegressionTrainer(Trainer[Optimizer, Loss, Optional[Writer], Model, Data])
             valid_data (Data): The data used to validate the model.
 
         Returns:
-            float: Final loss.
+            float: Final (or best) training loss.
         """
 
         self._model = model
@@ -146,14 +151,14 @@ class RegressionTrainer(Trainer[Optimizer, Loss, Optional[Writer], Model, Data])
         stag_counter = 0
         best_tparams = model.state_dict().copy()
         best_vparams = model.state_dict().copy()
-        best_tepoch = -1
-        best_vepoch = -1
+        best_mreparams = model.state_dict().copy()
         best_vloss = float("inf")
         best_tloss = float("inf")
+        best_mre = float("inf")
         for epoch in range(self.num_epochs):
-            tloss, mre = self._train_epoch(epoch)
-
+            tloss = self._train_epoch()
             vloss_total = 0.0
+            mre = 0.0
             vsize_total = 0
             for vdata in valid_data:
                 vinputs, vlabels = vdata
@@ -162,18 +167,23 @@ class RegressionTrainer(Trainer[Optimizer, Loss, Optional[Writer], Model, Data])
                 vloss = self.loss_fn(voutputs, vlabels)
                 vloss_total += vloss.item() * vsize
                 vsize_total += vsize
+                mre_ = torch.mean(torch.abs((voutputs - vlabels) / vlabels)) * vsize
+                mre += mre_.item()
             vloss = vloss_total / vsize_total
+            mre /= vsize_total
 
             if self.best_loss:
                 if vloss < best_vloss:
                     best_vloss = vloss
-                    best_vepoch = epoch
                     best_vparams = model.state_dict().copy()
 
                 if tloss < best_tloss:
                     best_tloss = tloss
-                    best_tepoch = epoch
                     best_tparams = model.state_dict().copy()
+
+                if mre < best_mre:
+                    best_mre = mre
+                    best_mreparams = model.state_dict().copy()
 
             if tloss <= self.opt_stop:
                 break
@@ -208,20 +218,20 @@ class RegressionTrainer(Trainer[Optimizer, Loss, Optional[Writer], Model, Data])
         if self.best_loss:
             final = best_tloss
 
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             model.load_state_dict(best_tparams)
-            model_patht = f"{self.file_name}_besttrain_{timestamp}_{best_tepoch}"
-            model_pathv = f"{self.file_name}_bestval_{timestamp}_{best_vepoch}"
+            model_patht = f"{self.file_name}_besttrain"
+            model_pathv = f"{self.file_name}_bestval"
+            model_pathmre = f"{self.file_name}_bestmre"
             torch.save(best_tparams, model_patht)
             torch.save(best_vparams, model_pathv)
+            torch.save(best_mreparams, model_pathmre)
 
         return final
 
-    def _train_epoch(self, epoch: int) -> Tuple[float, float]:
+    def _train_epoch(self) -> float:
         total_loss = 0.0
-        mre = 0.0
         total_size = 0
-        for i, data in enumerate(self._train_data):
+        for data in self._train_data:
             inputs, labels = data
             self.optimizer.zero_grad()
             outputs = self._model(inputs)
@@ -231,11 +241,8 @@ class RegressionTrainer(Trainer[Optimizer, Loss, Optional[Writer], Model, Data])
 
             Nx = len(inputs)
             total_loss += loss.item() * Nx
-            mre_ = torch.mean(torch.abs((outputs - labels) / labels)) * Nx
-            mre += mre_.item()
             total_size += Nx
 
         total_loss /= total_size
-        mre /= total_size
 
-        return total_loss, mre
+        return total_loss

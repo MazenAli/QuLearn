@@ -83,11 +83,20 @@ def check_shattering(
     b = data["b"]
     r = data["r"]
 
+    path = None
+    if trainer.best_loss:
+        path = f"{trainer.file_name}_bestmre"
+
     for sr in range(len(r)):
         shattered = True
         for sb in range(len(b)):
             loader = datagen.data_to_loader(data, sr, sb)
             trainer.train(model, loader, loader)
+
+            if path is not None:
+                state = torch.load(path)
+                model.load_state_dict(state)
+
             predictions = model(X)
 
             for i, pred in enumerate(predictions):

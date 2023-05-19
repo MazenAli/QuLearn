@@ -1,10 +1,13 @@
-import torch
 import unittest
+import os
+import tempfile
+import torch
+from torch.nn import Linear
+from torch.optim import Adam
 
-from qml_mor.models import LinearModel
 from qml_mor.fat import fat_shattering_dim, check_shattering, normalize_const
 from qml_mor.datagen import DataGenFat, UniformPrior
-from qml_mor.trainer import AdamTorch
+from qml_mor.trainer import RegressionTrainer
 
 
 class TestFunctions(unittest.TestCase):
@@ -30,13 +33,15 @@ class TestFunctions(unittest.TestCase):
             def __call__(self, x, params):
                 return torch.sum(x * params[0])
 
-        model = DummyModel()
+        model = Linear(sizex, 1, dtype=torch.float64)
 
         loss_fn = torch.nn.MSELoss()
-        params = [torch.tensor([1.0, 1.0, 1.0], requires_grad=True)]
-        opt = AdamTorch(params, loss_fn, num_epochs=20)
+        opt = Adam(model.parameters(), lr=0.1)
+        trainer = RegressionTrainer(
+            opt, loss_fn=loss_fn, num_epochs=20, best_loss=False
+        )
 
-        shattered = check_shattering(model, datagen, opt, d, gamma)
+        shattered = check_shattering(model, datagen, trainer, d, gamma)
         self.assertTrue(shattered)
 
     def test_fat_shattering_dim(self):
@@ -49,20 +54,14 @@ class TestFunctions(unittest.TestCase):
 
         prior = UniformPrior(sizex)
         datagen = DataGenFat(prior, Sb, Sr, 2.0 * gamma)
-
-        class DummyModel:
-            def __call__(self, x, params):
-                return torch.sum(x * params[0])
-
-        model = DummyModel()
+        model = Linear(sizex, 1, dtype=torch.float64)
 
         loss_fn = torch.nn.MSELoss()
-        params = [torch.tensor([1.0, 1.0, 1.0], requires_grad=True)]
-        opt = AdamTorch(params, loss_fn, num_epochs=20)
+        opt = Adam(model.parameters(), lr=0.1)
+        trainer = RegressionTrainer(opt, loss_fn, num_epochs=20, best_loss=False)
 
-        params = [torch.tensor([1.0, 2.0, 3.0])]
         fat_shattering_dimension = fat_shattering_dim(
-            model, datagen, opt, dmin, dmax, gamma
+            model, datagen, trainer, dmin, dmax, gamma
         )
         self.assertIsInstance(fat_shattering_dimension, int)
         self.assertGreater(fat_shattering_dimension, 0)
@@ -79,21 +78,20 @@ class TestFunctions(unittest.TestCase):
         prior = UniformPrior(sizex)
         datagen = DataGenFat(prior, Sb, Sr, 2.0 * gamma, seed=seed)
 
-        model = LinearModel()
+        model = Linear(sizex, 1, dtype=torch.float64)
 
         loss_fn = torch.nn.MSELoss()
-        params = [torch.zeros(sizex + 1, requires_grad=True)]
-        opt = AdamTorch(
-            params, loss_fn, num_epochs=500, opt_stop=1e-18, stagnation_count=500
-        )
+        opt = Adam(model.parameters(), lr=0.1)
 
-        params = [torch.tensor([1.0, 2.0, 3.0])]
-        fat_shattering_dimension = fat_shattering_dim(
-            model, datagen, opt, dmin, dmax, gamma
-        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "model")
+            trainer = RegressionTrainer(opt, loss_fn, num_epochs=500, file_name=path)
+            fat_shattering_dimension = fat_shattering_dim(
+                model, datagen, trainer, dmin, dmax, gamma
+            )
 
-        self.assertIsInstance(fat_shattering_dimension, int)
-        self.assertGreaterEqual(fat_shattering_dimension, sizex)
+            self.assertIsInstance(fat_shattering_dimension, int)
+            self.assertGreaterEqual(fat_shattering_dimension, sizex)
 
 
 if __name__ == "__main__":

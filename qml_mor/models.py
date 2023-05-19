@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import List, TypeVar, Generic, Dict
 from enum import Enum
 import math
@@ -46,6 +46,7 @@ class QNNModel(Module, Generic[X, T]):
 class IQPEReuploadSU2Parity(QNNModel[Tensor, Tensor]):
     """
     An IQP embedding circuit with additional SU(2) gates and parity measurements.
+    1-dimensional output.
 
     Args:
         qdevice (QDevice): Quantum device.
@@ -94,10 +95,20 @@ class IQPEReuploadSU2Parity(QNNModel[Tensor, Tensor]):
             qnode = qml.QNode(self.sample, self.qdevice, interface="torch")
 
         if len(X.shape) == 1:
-            out = qnode(X, self.parameters())
+            out = qnode(X)
+            if self.model_type == ModelType.Expectation:
+                out = torch.unsqueeze(out, 0)
+                out = torch.unsqueeze(out, 0)
         else:
             Nx = X.size(0)
-            out = torch.stack([qnode(X[k]) for k in range(Nx)])
+            outs = []
+            for k in range(Nx):
+                out_k = qnode(X[k])
+                if self.model_type == ModelType.Expectation:
+                    out_k = torch.unsqueeze(out_k, 0)
+                outs.append(out_k)
+
+            out = torch.stack(outs)
 
         return out
 
@@ -114,9 +125,11 @@ class IQPEReuploadSU2Parity(QNNModel[Tensor, Tensor]):
         """
         H = self.Hamiltonian()
 
-        return iqpe_reupload_su2_expectation(
+        result = iqpe_reupload_su2_expectation(
             x, self.init_theta, self.theta, H, self.omega
         )
+
+        return result
 
     def probabilities(self, x: Tensor) -> Probability:
         """
@@ -209,50 +222,6 @@ class IQPEReuploadSU2Parity(QNNModel[Tensor, Tensor]):
             raise ValueError(f"Last dimension of theta {shape_theta[3]} should be 2")
         if len(shape_W) != 1:
             raise ValueError(f"W (shape={shape_W}) must be a 1-dim tensor")
-
-
-class Model(ABC, Generic[X, P, T]):
-    """Abstract base class for regression models f(x, params)."""
-
-    @abstractmethod
-    def __call__(self, x: X, params: P) -> T:
-        """Abstract method for call."""
-        pass
-
-
-class LinearModel(Model[Tensor, List[Tensor], Tensor]):
-    """
-    Linear regression model
-    f(x, params) = x^T*params[0][0:len(x)] + params[0][len(x)]
-    """
-
-    def __call__(self, x: Tensor, params: List[Tensor]) -> Tensor:
-        """
-        Evaluate linear model for given parameters.
-
-        Args:
-            x (Tensor): feature tensor x.
-            params (List[Tensor]): List of parameter tensors. Should have lenght 1.
-
-        Returns:
-            Tensor: Value of model evaluated at x and params.
-                Computational graph attached.
-
-        Raises:
-            ValueError: If len(x)+1!=len(params[0]).
-        """
-
-        sizex = len(x)
-        sizep = len(params[0])
-
-        if sizex + 1 != sizep:
-            raise ValueError(
-                f"Tensors x with size {sizex} and params[0] with size {sizep} "
-                "should satisfy sizex+1=sizep!"
-            )
-
-        res = torch.sum(x * params[0][0:sizex]) + params[0][sizex]
-        return res
 
 
 def parity_hamiltonian(num_qubits: int, W: Tensor) -> Observable:

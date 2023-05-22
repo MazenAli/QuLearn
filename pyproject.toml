@@ -7,16 +7,19 @@ readme = "README.md"
 packages = [{include = "qml_mor"}]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = ">= 3.9, < 3.11"
 pythreejs = "^2.4.1"
 ipywidgets = "7.7.1"
 qiskit = {extras = ["visualization"], version = "^0.39.5"}
 matplotlib = "^3.6.3"
 scikit-learn = "^1.2.1"
 pennylane = "^0.28.0"
-torch = "^1.13.1"
+torch = "1.13.1"
 pyyaml = "^6.0"
 pennylane-lightning = "^0.29.0"
+torch-tb-profiler = "^0.4.1"
+tensorflow = "^2.12.0"
+protobuf = "4.23.0"
 
 
 [tool.poetry.group.dev.dependencies]

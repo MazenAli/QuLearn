@@ -10,7 +10,7 @@ import pennylane as qml
 from qml_mor.models import IQPEReuploadSU2Parity
 from qml_mor.capacity import capacity
 from qml_mor.datagen import DataGenCapacity
-from qml_mor.optimize import AdamTorch
+from qml_mor.trainer import AdamTorch
 
 
 def parse_args():

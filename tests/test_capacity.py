@@ -1,11 +1,15 @@
 import unittest
 from typing import List
+import os
+import tempfile
 import torch
+from torch.nn import Linear
+from torch.optim import Adam
 import pennylane as qml
-from qml_mor.models import IQPEReuploadSU2Parity, LinearModel
+from qml_mor.models import IQPEReuploadSU2Parity
 from qml_mor.capacity import capacity, fit_rand_labels
 from qml_mor.datagen import DataGenCapacity
-from qml_mor.optimize import AdamTorch
+from qml_mor.trainer import RegressionTrainer
 
 
 class TestCapacity(unittest.TestCase):
@@ -30,21 +34,18 @@ class TestCapacity(unittest.TestCase):
 
         params = [init_theta, theta, W]
 
-        model = IQPEReuploadSU2Parity(omega)
         dev = qml.device("default.qubit", wires=num_qubits, shots=None)
-
-        @qml.qnode(dev, interface="torch")
-        def qnn_model(x, params):
-            return model.qfunction(x, params)
-
+        model = IQPEReuploadSU2Parity(dev, params, omega)
         loss_fn = torch.nn.MSELoss()
-        opt = AdamTorch(params, loss_fn, num_epochs=20)
+        opt = Adam(model.parameters(), lr=0.1, amsgrad=True)
 
-        C = capacity(qnn_model, datagen, opt, Nmin, Nmax)
-
-        self.assertIsInstance(C, List)
-        self.assertLessEqual(C[0][3], 100)
-        self.assertGreaterEqual(C[0][3], 0)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "model")
+            trainer = RegressionTrainer(opt, loss_fn, num_epochs=20, file_name=path)
+            C = capacity(model, datagen, trainer, Nmin, Nmax)
+            self.assertIsInstance(C, List)
+            self.assertLessEqual(C[0][3], 100)
+            self.assertGreaterEqual(C[0][3], 0)
 
     def test_capacity_linear(self):
         num_samples = 10
@@ -56,20 +57,11 @@ class TestCapacity(unittest.TestCase):
         seed = 0
 
         datagen = DataGenCapacity(sizex=sizex, num_samples=num_samples, seed=seed)
-
-        params = [torch.zeros(sizex + 1, requires_grad=True)]
-
         loss_fn = torch.nn.MSELoss()
-        opt = AdamTorch(
-            params,
-            loss_fn,
-            amsgrad=True,
-            num_epochs=500,
-            opt_stop=1e-18,
-            stagnation_count=500,
-        )
-        model = LinearModel()
-        C = capacity(model, datagen, opt, Nmin, Nmax, stop_count=2)
+        model = Linear(sizex, 1, dtype=torch.float64)
+        opt = Adam(model.parameters(), lr=0.1, amsgrad=True)
+        trainer = RegressionTrainer(opt, loss_fn, num_epochs=500, best_loss=False)
+        C = capacity(model, datagen, trainer, Nmin, Nmax, stop_count=2)
 
         self.assertIsInstance(C, List)
         self.assertGreaterEqual(C[0][3], 0)
@@ -97,16 +89,13 @@ class TestFitRandLabels(unittest.TestCase):
 
         params = [init_theta, theta, W]
 
-        model = IQPEReuploadSU2Parity(omega)
         dev = qml.device("default.qubit", wires=num_qubits, shots=None)
-
-        @qml.qnode(dev, interface="torch")
-        def qnn_model(x, params):
-            return model.qfunction(x, params)
+        model = IQPEReuploadSU2Parity(dev, params, omega)
 
         loss_fn = torch.nn.MSELoss()
-        opt = AdamTorch(params, loss_fn, num_epochs=10)
-        mre = fit_rand_labels(qnn_model, datagen, opt, N)
+        opt = Adam(params, lr=0.1, amsgrad=True)
+        trainer = RegressionTrainer(opt, loss_fn, num_epochs=10, best_loss=False)
+        mre = fit_rand_labels(model, datagen, trainer, N)
 
         self.assertIsInstance(mre, float)
 

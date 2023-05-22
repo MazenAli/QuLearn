@@ -17,10 +17,10 @@ class TestRademacherLoss(unittest.TestCase):
         with self.assertRaises(ValueError):
             RademacherLoss(torch.tensor([1, 2, 3]))  # values not 1 or -1
         with self.assertRaises(ValueError):
-            RademacherLoss(torch.tensor([[1, -1], [1, -1]]))  # 2D tensor
+            RademacherLoss(torch.tensor([[1, -1], [9.0, 1.0]]))  # 1D tensor
 
     def test_forward(self):
-        output = torch.tensor([0.1, 0.2, 0.3, 0.4])
+        output = torch.tensor([[0.1], [0.2], [0.3], [0.4]])
         expected_loss = 0.05  # -1/4 * sum([0.1, -0.2, 0.3, -0.4])
         actual_loss = self.loss(output)
         self.assertAlmostEqual(actual_loss.item(), expected_loss, places=5)

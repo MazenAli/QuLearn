@@ -11,7 +11,7 @@ from qml_mor.models import IQPEReuploadSU2Parity
 from qml_mor.loss import RademacherLoss
 from qml_mor.rademacher import rademacher
 from qml_mor.datagen import NormalPrior, DataGenRademacher
-from qml_mor.optimize import AdamTorch
+from qml_mor.trainer import AdamTorch
 
 
 def parse_args():

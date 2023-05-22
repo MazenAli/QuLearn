@@ -20,7 +20,7 @@ class TestDataGenCapacity(unittest.TestCase):
         self.datagen = DataGenCapacity(sizex=sizex, num_samples=num_samples, seed=seed)
         self.data = {
             "X": torch.randn(100, sizex),
-            "Y": torch.randn(num_samples, 100),
+            "Y": torch.randn(num_samples, 100, 1),
         }
 
     def test_gen_dataset(self):
@@ -38,7 +38,7 @@ class TestDataGenCapacity(unittest.TestCase):
         self.assertIsInstance(x, torch.Tensor)
         self.assertIsInstance(y, torch.Tensor)
         self.assertEqual(x.shape, (N, sizex))
-        self.assertEqual(y.shape, (num_samples, N))
+        self.assertEqual(y.shape, (num_samples, N, 1))
 
     def test_data_to_loader_raises_value_error_for_invalid_s(self):
         with self.assertRaises(ValueError):
@@ -86,7 +86,7 @@ class TestDataGenFat(unittest.TestCase):
         self.assertIsInstance(b, np.ndarray)
         self.assertIsInstance(r, np.ndarray)
         self.assertEqual(X.shape, (d, sizex))
-        self.assertEqual(Y.shape, (Sr, Sb, d))
+        self.assertEqual(Y.shape, (Sr, Sb, d, 1))
 
     def setUp(self):
         sizex = 10
@@ -95,7 +95,7 @@ class TestDataGenFat(unittest.TestCase):
         self.datagen = DataGenFat(prior=prior, Sb=10, Sr=10, seed=seed)
         self.data = {
             "X": torch.randn(100, sizex),
-            "Y": torch.randn(10, 10, 100),
+            "Y": torch.randn(10, 10, 100, 1),
         }
 
     def test_data_to_loader_raises_value_error_for_invalid_sr(self):

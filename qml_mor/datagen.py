@@ -205,8 +205,8 @@ class DataGenCapacity(DataGenTorch[DataOut, Loader]):
             raise ValueError(f"X must be 2-dim (not {check})")
 
         check = len(Y.shape)
-        if len(Y.shape) != 2:
-            raise ValueError(f"Y must be 2-dim (not {check})")
+        if len(Y.shape) != 3:
+            raise ValueError(f"Y must be 3-dim (not {check})")
 
 
 class DataGenFat(DataGenTorch[DataOut, Loader]):
@@ -310,8 +310,8 @@ class DataGenFat(DataGenTorch[DataOut, Loader]):
             raise ValueError(f"X must be 2-dim (not {check})")
 
         check = len(Y.shape)
-        if check != 3:
-            raise ValueError(f"Y must be 3-dim (not {check})")
+        if check != 4:
+            raise ValueError(f"Y must be 4-dim (not {check})")
 
 
 class DataGenRademacher(DataGenTorch[DataOut, Loader]):
@@ -552,6 +552,7 @@ def gen_dataset_capacity(
         * torch.rand(
             num_samples,
             N,
+            1,
             dtype=torch.float64,
             device=device,
             requires_grad=False,
@@ -749,14 +750,14 @@ def gen_synthetic_labels_fat(
             f"Should be constant and the same."
         )
 
-    labels = np.zeros((Sr, Sb, d))
+    labels = np.zeros((Sr, Sb, d, 1))
     for sr in range(Sr):
         for sb in range(Sb):
             for i in range(d):
                 if b[sb][i] == 1:
-                    labels[sr, sb, i] = r[sr, i] + gamma
+                    labels[sr, sb, i, 0] = r[sr, i] + gamma
                 else:
-                    labels[sr, sb, i] = r[sr, i] - gamma
+                    labels[sr, sb, i, 0] = r[sr, i] - gamma
 
     y = torch.tensor(labels, dtype=torch.float64, device=device, requires_grad=False)
 

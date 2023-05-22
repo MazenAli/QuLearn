@@ -42,8 +42,11 @@ class RademacherLoss(Loss):
         """
 
         len_shape = len(output.shape)
-        if len_shape != 1:
-            raise ValueError(f"output (dim = {len_shape}) should be a 1D tensor")
+        if len_shape != 2:
+            raise ValueError(f"output (dim = {len_shape}) should be a 2D tensor")
+        second_dim = output.shape[1]
+        if second_dim != 1:
+            raise ValueError(f"output second dim should be 1 not {second_dim}")
 
         len_out = output.shape[0]
         len_sigmas = self.sigmas.shape[0]
@@ -52,7 +55,7 @@ class RademacherLoss(Loss):
                 f"output length ({len_out}) does not match sigmas length ({len_sigmas})"
             )
 
-        loss = -(self.sigmas * output).mean()
+        loss = -(self.sigmas * output[:, 0]).mean()
 
         return loss
 

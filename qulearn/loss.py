@@ -16,8 +16,8 @@ class RademacherLoss(Loss):
     """
     Computes the loss function required to estimate emprical Rademacher complexity.
 
-    Args:
-        sigmas (Tensor): 1D Tensor of sigmas.
+    :param sigmas: 1D Tensor of sigmas.
+    :type sigmas: Tensor
     """
 
     def __init__(self, sigmas: Tensor) -> None:
@@ -30,15 +30,13 @@ class RademacherLoss(Loss):
         """
         Compute loss = -1/m * sum_k sigma_k*f_k.
 
-        Args:
-            output (Tensor): Predicted value tensor.
-            _ (Tensor, optional): Ignored. Defaults to None.
-
-        Returns:
-            Tensor: Loss value.
-
-        Raises:
-            ValueError: If output not a 1D Tensor, or not the same length as sigmas.
+        :param output: Predicted value tensor.
+        :type output: Tensor
+        :param _: Ignored. Defaults to None.
+        :type _: Tensor
+        :return: Loss value.
+        :rtype: Tensor
+        :raises ValueError: If output not a 1D Tensor, or not the same length as sigmas.
         """
 
         len_shape = len(output.shape)
@@ -63,14 +61,10 @@ class RademacherLoss(Loss):
         """
         Ensures sigmas has the expected format.
 
-        Args:
-            sigmas (Tensor): sigmas Tensor.
-
-        Returns:
-            None
-
-        Raises:
-            ValueError: If sigmas has invalid shape or values.
+        :param sigmas: sigmas Tensor.
+        :type sigmas: Tensor
+        :return: None
+        :raises ValueError: If sigmas has invalid shape or values.
         """
 
         len_shape = len(sigmas.shape)

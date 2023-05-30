@@ -21,7 +21,7 @@ Tr: TypeAlias = Trainer
 Capacity = List[Tuple[int, float, int, int]]
 
 
-def capacity(
+def memory(
     model: Model,
     datagen: Datagen,
     trainer: Tr,
@@ -33,21 +33,29 @@ def capacity(
 ) -> Capacity:
     """
     Estimates the memory capacity of a model over a range of values of N.
-    See arXiv:1908.01364.
 
-    Args:
-        model (Model): The model.
-        datagen (Datagen): The (synthetic) data generator.
-        trainer (Tr): The trainer.
-        Nmin (int): The minimum value of N.
-        Nmax (int): The maximum value of N, included.
-        Nstep (int, optional): Step size for N. Defaults to 1.
-        early_stop (bool, optional): Stops early if previous stop_count iterations
+    :param model: The model.
+    :type model: Model
+    :param datagen: The (synthetic) data generator.
+    :type datagen: Datagen
+    :param trainer: The trainer.
+    :type trainer: Tr
+    :param Nmin: The minimum value of N.
+    :type Nmin: int
+    :param Nmax: The maximum value of N, included.
+    :type Nmax: int
+    :param Nstep: Step size for N. Defaults to 1.
+    :type Nstep: int, optional
+    :param early_stop: Stops early if previous stop_count iterations
             capacity at least as large. Defaults to True.
-        stop_count (int, optional): See early_stop. Defaults to 1.
+    :type early_stop: bool, optional
+    :param stop_count: See early_stop. Defaults to 1.
+    :type stop_count: int, optional
+    :return: List of tuples (N, mre=2^(-m), m, N*m).
+    :rtype: Capacity
 
-    Returns:
-        Capacity: List of tuples (N, mre=2^(-m), m, N*m).
+    .. seealso::
+        arXiv:1908.01364.
     """
 
     capacities = []
@@ -77,14 +85,16 @@ def fit_rand_labels(model: Model, datagen: Datagen, trainer: Tr, N: int) -> floa
     """
     Fits random labels to a model and returns the mean relative error.
 
-    Args:
-        model (Model): The model.
-        datagen (Datagen): The data generation class.
-        trainer (Tr): The trainer.
-        N (int): The number of inputs.
-
-    Returns:
-        float: The mean relative error.
+    :param model: The model.
+    :type model: Model
+    :param datagen: The data generation class.
+    :type datagen: Datagen
+    :param trainer: The trainer.
+    :type trainer: Tr
+    :param N: The number of inputs.
+    :type N: int
+    :return: The mean relative error.
+    :rtype: float
     """
 
     data = datagen.gen_data(N)

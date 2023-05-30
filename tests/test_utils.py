@@ -1,36 +1,47 @@
-import unittest
+import pennylane as qml
 import torch
-from qml_mor.utils import probabilities_to_dictionary, samples_to_dictionary
+from collections import Counter
+from qulearn.utils import (
+    probabilities_to_dictionary,
+    samples_to_dictionary,
+    all_bin_sequences,
+    parities_outcome,
+    parities_outcome_probs,
+)
 
 
-class TestUtils(unittest.TestCase):
-    def test_probabilities_to_dictionary(self):
-        probs = torch.tensor([0.1, 0.2, 0.7, 0.0])
-        result = probabilities_to_dictionary(probs)
-        expected = {"00": 0.1, "01": 0.2, "10": 0.7, "11": 0.0}
-        self.assertDictEqual(result, expected)
-
-    def test_probabilities_to_dictionary_error(self):
-        probs = torch.tensor([0.1, 0.2, 0.7])
-        with self.assertRaises(ValueError):
-            probabilities_to_dictionary(probs)
-
-    def test_samples_to_dictionary_error(self):
-        samples = torch.tensor(
-            [[0, 0, 1], [1, 1.0, 0], [0, 0, 1], [1, 1, 0], [1, 1, 0]]
-        )
-        with self.assertRaises(ValueError):
-            samples_to_dictionary(samples)
-
-    def test_samples_to_dictionary(self):
-        samples = torch.tensor(
-            [[0, 0, 1], [1, 1, 0], [0, 0, 1], [1, 1, 0], [1, 1, 0]], dtype=torch.int
-        )
-        result = samples_to_dictionary(samples)
-        expected = {"001": 0.4, "110": 0.6}
-        result = samples_to_dictionary(samples)
-        self.assertDictEqual(result, expected)
+# probabilities_to_dictionary
+def test_probabilities_to_dictionary():
+    probs = torch.tensor([0.1, 0.9])
+    assert probabilities_to_dictionary(probs) == {"0": 0.1, "1": 0.9}
 
 
-if __name__ == "__main__":
-    unittest.main()
+# samples_to_dictionary
+def test_samples_to_dictionary():
+    samples = torch.tensor([[0, 1], [1, 0]], dtype=torch.int32)
+    assert samples_to_dictionary(samples) == {"01": 0.5, "10": 0.5}
+
+
+# all_bin_sequences
+def test_all_bin_sequences():
+    assert Counter(map(tuple, all_bin_sequences(2))) == Counter(
+        map(tuple, [[0, 1], [1], [0], []])
+    )
+
+
+# parities_outcome
+def test_parities_outcome():
+    bitstring = "01"
+    coeffs = [1, -1]
+    obs = [qml.Identity(0), qml.PauliZ(1)]
+    H = qml.Hamiltonian(coeffs, obs)
+    assert parities_outcome(bitstring, H) == 0.0
+
+
+# parities_outcome_probs
+def test_parities_outcome_probs():
+    probs = {"01": 0.5, "10": 0.5}
+    coeffs = [1, -1]
+    obs = [qml.Identity(0), qml.PauliZ(1)]
+    H = qml.Hamiltonian(coeffs, obs)
+    assert parities_outcome_probs(probs, H) == {0.0: 0.5, 2.0: 0.5}

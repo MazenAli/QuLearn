@@ -29,21 +29,22 @@ def fat_shattering_dim(
     """
     Estimate the fat-shattering dimension for a model with a given architecture.
 
-    Args:
-        model (Model): The model.
-        datagen (Datagen): The (synthetic) data generator.
-        trainer (Tr): The trainer.
-        dmin (int): Iteration start for dimension check.
-        dmax (int): Iteration stop for dimension check (including).
-        gamma (float, optional): The margin value.
-            Defaults to 0.0 (pseudo-dim).
-        gamma_fac (float, optional): Additional multiplicative factor
-            to increase margin. Defaults to 1.0.
-        dstep (int, optional): Dimension iteration step size.
-            Defaults to 1.
-
-    Returns:
-        int: The estimated fat-shattering dimension.
+    :param model: The model.
+    :type model: Model
+    :param datagen: The (synthetic) data generator.
+    :type datagen: Datagen
+    :param trainer: The trainer.
+    :type trainer: Tr
+    :param dmin: Iteration start for dimension check.
+    :type dmin: int
+    :param dmax: Iteration stop for dimension check (including).
+    :type dmax: int
+    :param gamma: The margin value. Defaults to 0.0 (pseudo-dim).
+    :type gamma: float, optional
+    :param dstep: Dimension iteration step size. Defaults to 1.
+    :type dstep: int
+    :return: The estimated fat-shattering dimension.
+    :rtype: int
     """
 
     for d in range(dmin, dmax + 1, dstep):
@@ -66,16 +67,18 @@ def check_shattering(
     """
     Check if the model shatters a given dimension d with margin value gamma.
 
-    Args:
-        model (Model): The model.
-        datagen (Datagen): The (synthetic) data generator.
-        trainer (Tr): The trainer.
-        d (int): Size of data set to shatter.
-        gamma (float): The margin value.
-
-    Returns:
-        bool: True if the model shatters a random data set of size d,
-            False otherwise.
+    :param model: The model.
+    :type model: Model
+    :param datagen: The (synthetic) data generator.
+    :type datagen: Datagen
+    :param trainer: The trainer.
+    :type trainer: Tr
+    :param d: Size of data set to shatter.
+    :type d: int
+    :param gamma: The margin value.
+    :type gamma: float
+    :return: True if the model shatters a random data set of size d, False otherwise.
+    :rtype: bool
     """
 
     data = datagen.gen_data(d)
@@ -118,8 +121,8 @@ def check_shattering(
 
 def normalize_const(weights: Tensor, gamma: float, Rx: float) -> float:
     """
-    Compute a normalization constant given a tensor of weights
-    and the margin parameter gamma.
+    Compute a normalization constant given a tensor of weights and
+    the margin parameter gamma.
 
     Rationale: the fat-shattering dimension of a linear classifier,
     with weights bounded by Rw and data bounded by Rx, is bounded by
@@ -127,13 +130,14 @@ def normalize_const(weights: Tensor, gamma: float, Rx: float) -> float:
     of a model with unbounded weights compares it to the best linear classifier
     with the same weight norm.
 
-    Args:
-        weights (Tensor): Tensor of weights
-        gamma (float): Margin parameter.
-        boundx (float): Estimated 2-radius of input data.
-
-    Returns:
-        float: A positive real-valued normalization constant.
+    :param weights: Tensor of weights
+    :type weights: Tensor
+    :param gamma: Margin parameter.
+    :type gamma: float
+    :param Rx: Estimated 2-radius of input data.
+    :type Rx: float
+    :return: A positive real-valued normalization constant.
+    :rtype: float
     """
 
     V = torch.norm(weights, p=2)

@@ -7,28 +7,40 @@ import datetime
 import json
 import torch
 import pennylane as qml
-from qml_mor.models import IQPEReuploadSU2Parity
-from qml_mor.loss import RademacherLoss
-from qml_mor.rademacher import rademacher
-from qml_mor.datagen import NormalPrior, DataGenRademacher
-from qml_mor.trainer import AdamTorch
+from qulearn.qlayer import IQPEReuploadSU2Parity
+from qulearn.memory import capacity
+from qulearn.datagen import DataGenCapacity
+from qulearn.trainer import AdamTorch
 
 
 def parse_args():
     # Read the configuration file
-    with open("rademacher_iqpe_reup_parity.yaml", "r") as f:
+    with open("cap_iqpe_reup_parity.yaml", "r") as f:
         config = yaml.safe_load(f)
     amsgrad = config.get("amsgrad", False)
+    early_stop = config.get("early_stop", False)
     cuda = config.get("cuda", False)
 
     parser = argparse.ArgumentParser(
-        description="Process arguments for QML-MOR rademacher complexity experiments"
+        description="Process arguments for QML-MOR capacity experiments"
     )
     parser.add_argument(
-        "--m",
+        "--Nmin",
         type=int,
-        default=config["m"],
-        help="Size of data set",
+        default=config["Nmin"],
+        help="Minimum value of N for experiments",
+    )
+    parser.add_argument(
+        "--Nmax",
+        type=int,
+        default=config["Nmax"],
+        help="Maximum value of N for experiments (included)",
+    )
+    parser.add_argument(
+        "--Nstep",
+        type=int,
+        default=config["Nstep"],
+        help="Step size for N in experiments",
     )
     parser.add_argument(
         "--num_qubits",
@@ -55,16 +67,10 @@ def parse_args():
         help="The exponential feature scaling factor",
     )
     parser.add_argument(
-        "--num_data_samples",
+        "--num_samples",
         type=int,
-        default=config["num_data_samples"],
-        help="Number of data samples for estimation",
-    )
-    parser.add_argument(
-        "--num_sigma_samples",
-        type=int,
-        default=config["num_sigma_samples"],
-        help="Numer of sigma samples for estimation",
+        default=config["num_samples"],
+        help="Number of samples for random labels",
     )
     parser.add_argument(
         "--lr",
@@ -101,6 +107,18 @@ def parse_args():
         type=int,
         default=config["stagnation_count"],
         help="Allowed times below threshold",
+    )
+    parser.add_argument(
+        "--early_stop",
+        action="store_true",
+        default=early_stop,
+        help="Stops iterations early if the previous capacity is at least as large",
+    )
+    parser.add_argument(
+        "--stop_count",
+        type=int,
+        default=config["stop_count"],
+        help="Allowed times capacity not improving",
     )
     parser.add_argument(
         "--seed",
@@ -151,30 +169,11 @@ def main(args):
 
     # Define qnode
     shots = None
-    qdevice = qml.device("lightning.qubit", wires=args.num_qubits, shots=shots)
+    qdevice = qml.device("default.qubit", wires=args.num_qubits, shots=shots)
     qnode = qml.QNode(qnn_model.qfunction, qdevice, interface="torch")
 
-    # Set data generating method
-    sizex = num_qubits
-    num_sigma_samples = args.num_sigma_samples
-    num_data_samples = args.num_data_samples
-    prior = NormalPrior(sizex=sizex, seed=seed, device=cdevice)
-    datagen = DataGenRademacher(
-        prior=prior,
-        num_sigma_samples=num_sigma_samples,
-        num_data_samples=num_data_samples,
-        seed=seed,
-        device=cdevice,
-    )
-
-    m = args.m
-    data = datagen.gen_data(m)
-    X = data["X"]
-    sigmas = data["sigmas"]
-
     # Set optimizer
-    sigma = sigmas[0]
-    loss_fn = RademacherLoss(sigma)
+    loss_fn = torch.nn.MSELoss()
     opt = AdamTorch(
         params=params,
         loss_fn=loss_fn,
@@ -186,9 +185,31 @@ def main(args):
         stagnation_count=args.stagnation_count,
     )
 
-    # Estimate Rademacher complexity
+    # Set data generating method
+    sizex = num_qubits
+    num_samples = args.num_samples
+    datagen = DataGenCapacity(
+        sizex=sizex, num_samples=num_samples, seed=seed, device=cdevice
+    )
+
+    # Estimate capacity
+    Nmin = args.Nmin
+    Nmax = args.Nmax
+    Nstep = args.Nstep
+    early_stop = args.early_stop
+    stop_count = args.stop_count
+
     start_time = time.time()
-    rad_compl = rademacher(model=qnode, opt=opt, X=X, sigmas=sigmas)
+    capacities = capacity(
+        model=qnode,
+        datagen=datagen,
+        opt=opt,
+        Nmin=Nmin,
+        Nmax=Nmax,
+        Nstep=Nstep,
+        early_stop=early_stop,
+        stop_count=stop_count,
+    )
     end_time = time.time()
     time_taken = end_time - start_time
 
@@ -203,22 +224,23 @@ def main(args):
 
     results = {
         "date": creation_date,
-        "time_taken": time_taken,
         "cdevice": cdevice.type,
+        "time_taken": time_taken,
         "num_qubits": args.num_qubits,
         "num_layers": args.num_layers,
         "num_reups": args.num_reups,
         "omega": omega,
-        "m": m,
+        "Nmin": Nmin,
+        "Nmax": Nmax,
+        "Nstep": Nstep,
         "num_params_gates": num_params_gates,
         "num_params_obs": num_params_obs,
         "num_params": num_params,
-        "num_data_samples": num_data_samples,
-        "num_sigma_samples": num_sigma_samples,
+        "num_samples": num_samples,
         "num_epochs": args.num_epochs,
         "opt_stop": args.opt_stop,
         "seed": seed,
-        "rademacher": rad_compl.item(),
+        "capacities": capacities,
     }
     exp_id = str(uuid.uuid4())
     direc = args.save_dir

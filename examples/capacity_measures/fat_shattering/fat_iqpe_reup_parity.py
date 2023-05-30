@@ -7,10 +7,10 @@ import datetime
 import json
 import torch
 import pennylane as qml
-from qml_mor.models import IQPEReuploadSU2Parity
-from qml_mor.fat import fat_shattering_dim, normalize_const
-from qml_mor.datagen import DataGenFat, UniformPrior
-from qml_mor.trainer import AdamTorch
+from qulearn.qlayer import IQPEReuploadSU2Parity
+from qulearn.fat import fat_shattering_dim, normalize_const
+from qulearn.datagen import DataGenFat, UniformPrior
+from qulearn.trainer import AdamTorch
 
 
 def parse_args():

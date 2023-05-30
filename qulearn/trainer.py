@@ -32,18 +32,26 @@ class Trainer(ABC, Generic[T, L, W, M, D]):
     """
     Abstract base class for optimizing model parameters.
 
-    Args:
-        optimizer (T): Optimizer for updating parameters.
-        loss_fn (L): Loss function to minimize.
-        writer (W): Writer for logging.
-        num_epochs (int): Maximum number of epochs.
-        opt_stop (float): Stop optimization if loss is smaller
+    :param optimizer: Optimizer for updating parameters.
+    :type optimizer: T
+    :param loss_fn: Loss function to minimize.
+    :type loss_fn: L
+    :param writer: Writer for logging.
+    :type writer: W
+    :param num_epochs: Maximum number of epochs.
+    :type num_epochs: int
+    :param opt_stop: Stop optimization if loss is smaller
             than this value.
-        stagnation_threshold (float): If relative reduction in loss
-            smaller than this for stagnation_count times, stop.
-        stagnation_count (int): See stagnation_threshold.
-        best_loss (bool): Save parameters corresponding to best loss value.
-        file_name (str): Name of file to save best parameters.
+    :type opt_stop: float
+    :param stagnation_threshold: If relative reduction in loss
+        smaller than this for stagnation_count times, stop.
+    :type stagnation_threshold: float
+    :param stagnation_count: See stagnation_threshold.
+    :type stagnation_count: int
+    :param best_loss: Save parameters corresponding to best loss value.
+    :type best_loss: bool
+    :param file_name: Name of file to save best parameters.
+    :type file_name: str
     """
 
     def __init__(
@@ -73,13 +81,14 @@ class Trainer(ABC, Generic[T, L, W, M, D]):
         """
         Optimize model parameters using the given data.
 
-        Args:
-            model (M): The model to optimize.
-            train_data (D): Data used for training.
-            valid_data (D): Data used for validation.
-
-        Returns:
-            float: The final loss value.
+        :param model: The model to optimize.
+        :type model: M
+        :param train_data: Data used for training.
+        :type train_data: D
+        :param valid_data: Data used for validation.
+        :type valid_data: D
+        :return: The final loss value.
+        :rtype: float
         """
         pass
 
@@ -88,22 +97,27 @@ class RegressionTrainer(Trainer[Optimizer, Loss, Optional[Writer], Model, Data])
     """
     Training on labeled real-valued input and output data.
 
-    Args:
-        optimizer (Optimizer): Optimizer.
-        loss_fn (Loss): Loss function to minimize.
-        writer (Writer, optional): Writer for logging.
-            Defaults to None.
-        num_epochs (int, optional): Defaults to 300.
-        opt_stop (float, optional): Training loss stopping criterion.
-            Defaults to 1e-16.
-        stagnation_threshold (float, optional): Stagnation relative change
+    :param optimizer: Optimizer.
+    :type optimizer: Optimizer
+    :param loss_fn: Loss function to minimize.
+    :type loss_fn: Loss
+    :param writer: Writer for logging. Defaults to None.
+    :type writer: Optional[Writer]
+    :param num_epochs: Defaults to 300.
+    :type num_epochs: int, optional
+    :param opt_stop: Training loss stopping criterion. Defaults to 1e-16.
+    :type opt_stop: float, optional
+    :param stagnation_threshold: Stagnation relative change
             stopping criterion. Defaults to 0.01.
-        stagnation_count (int, optional): Stagnation length for stopping.
+    :type stagnation_threshold: float, optional
+    :param stagnation_count: Stagnation length for stopping.
             Defaults to 100.
-        best_loss (bool, optional): Save best training loss parameters.
+    :type stagnation_count: int, optional
+    :param best_loss: Save best training loss parameters.
             Defaults to True.
-        file_name (str, optional): Name of file prefix for best parameters.
-            Defaults to "model".
+    :type best_loss: bool, optional
+    :param file_name: Name of file prefix for best parameters. Defaults to "model".
+    :type file_name: str, optional
     """
 
     def __init__(
@@ -132,16 +146,17 @@ class RegressionTrainer(Trainer[Optimizer, Loss, Optional[Writer], Model, Data])
 
     def train(self, model: Model, train_data: Data, valid_data: Data) -> float:
         """
-        Optimize the parameters of a model, compute training loss, validation loss and
-        validation mre.
+        Optimize the parameters of a model, compute training loss,
+        validation loss and validation mre.
 
-        Args:
-            model (Model): The model to optimize.
-            train_data (Data): The data used to train the model.
-            valid_data (Data): The data used to validate the model.
-
-        Returns:
-            float: Final (or best) training loss.
+        :param model: The model to optimize.
+        :type model: Model
+        :param train_data: The data used to train the model.
+        :type train_data: Data
+        :param valid_data: The data used to validate the model.
+        :type valid_data: Data
+        :return: Final (or best) training loss.
+        :rtype: float
         """
 
         self._model = model
@@ -229,6 +244,7 @@ class RegressionTrainer(Trainer[Optimizer, Loss, Optional[Writer], Model, Data])
         return final
 
     def _train_epoch(self) -> float:
+        """"""
         total_loss = 0.0
         total_size = 0
         for data in self._train_data:

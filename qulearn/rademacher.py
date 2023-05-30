@@ -23,15 +23,18 @@ def rademacher(
     """
     Estimate Rademacher complexity of a given model.
 
-    Args:
-        model (Model): Prediction model.
-        trainer (Tr): The trainer.
-        X (Tensor): Data tensor of size (num_data_samples, size_data_set, dim_feature)
-        sigmas (Tensor): Sigmas tensor of size (num_sigma_samples, size_data_set)
-        datagen (Datagen): Datagen object for converting to loader.
-
-    Returns:
-        Tensor: Scalar-valued tensor with Rademacher complexity.
+    :param model: Prediction model.
+    :type model: Model
+    :param trainer: The trainer.
+    :type trainer: Tr
+    :param X: Data tensor of size (num_data_samples, size_data_set, dim_feature)
+    :type X: Tensor
+    :param sigmas: Sigmas tensor of size (num_sigma_samples, size_data_set)
+    :type sigmas: Tensor
+    :param datagen: Datagen object for converting to loader.
+    :type datagen: Datagen
+    :return: Scalar-valued tensor with Rademacher complexity.
+    :rtype: Tensor
     """
 
     num_data_samples = X.shape[0]

@@ -26,15 +26,16 @@ class DataGenTorch(ABC, Generic[D, L]):
     """
     Abstract base class for generating data in PyTorch.
 
-    Args:
-        batch_size (int, optional): Size of batch for data loader.
-            Defaults to None (batch mode).
-        shuffle (bool, optional): Shuffle data in loader.
-            Defaults to False.
-        seed (int, optional): The seed used to initialize the
-            random number generator. Defaults to None.
-        device (Device, optional): The device where to run the computations.
-            Defaults to torch.device("cpu").
+    :param batch_size: Size of batch for data loader. Defaults to None (batch mode).
+    :type batch_size: int
+    :param shuffle: Shuffle data in loader. Defaults to False.
+    :type shuffle: bool
+    :param seed: The seed used to initialize the random number generator.
+        Defaults to None.
+    :type seed: int
+    :param device: The device where to run the computations. Defaults to
+        torch.device("cpu").
+    :type device: Device
     """
 
     def __init__(
@@ -54,18 +55,22 @@ class DataGenTorch(ABC, Generic[D, L]):
         """
         Generate the data.
 
-        Returns:
-            D: The generated data.
+        :param *args.
+        :param **kwargs.
+        :returns: The generated data.
+        :rtype: D
         """
         pass
 
     @abstractmethod
-    def data_to_loader(self, *args, **kwarsg) -> L:
+    def data_to_loader(self, *args, **kwargs) -> L:
         """
         Convert data from gen_data to pytorch data loader.
 
-        Returns:
-            L: Data loader.
+        :param *args.
+        :param **kwargs.
+        :returns: Data loader.
+        :rtype: L
         """
         pass
 
@@ -74,12 +79,14 @@ class PriorTorch(ABC, Generic[D]):
     """
     Abstract base class for generating priors in PyTorch.
 
-    Args:
-        sizex (int): Dimension of feature space.
-        seed (int, optional): The seed used to initialize the
-            random number generator. Defaults to None.
-        device (Device, optional): The device where to run the computations.
-            Defaults to torch.device("cpu").
+    :param sizex: Dimension of feature space.
+    :type sizex: int
+    :param seed: The seed used to initialize the random number
+        generator. Defaults to None.
+    :type seed: int, optional
+    :param device: The device where to run the computations. Defaults to
+        torch.device("cpu").
+    :type device: Device
     """
 
     def __init__(
@@ -97,25 +104,30 @@ class PriorTorch(ABC, Generic[D]):
         """
         Generate the data.
 
-        Returns:
-            D: The generated data.
+        :param *args.
+        :param **kwargs.
+        :returns: The generated data.
+        :rtype: D
         """
         pass
 
 
 class DataGenCapacity(DataGenTorch[DataOut, Loader]):
     """
-    Generates data for capacity estimation.
+    Generates data for memory capacity estimation.
 
-    Args:
-        sizex (int): The size of the input data.
-        num_samples (int, optional): The number of output samples to generate.
-            Defaults to 10.
-        scale (float, optional): The re-scaling factor for uniform
-            random numbers in [0, 1]. Defaults to 2.0.
-        shift (float, optional): The shift value for uniform
-            random numbers in [0, 1]. Defaults to -1.0.
-        kwargs: Keyword arguments passed to the base class.
+    :param sizex: The size of the input data.
+    :type sizex: int
+    :param num_samples: The number of output samples to generate.
+        Defaults to 10.
+    :type num_samples: int, optional
+    :param scale: The re-scaling factor for uniform random numbers in [0, 1].
+        Defaults to 2.0.
+    :type scale: float, optional
+    :param shift: The shift value for uniform random numbers in [0, 1].
+        Defaults to -1.0.
+    :type shift: float, optional
+    :param kwargs: Keyword arguments passed to the base class.
     """
 
     def __init__(
@@ -137,11 +149,10 @@ class DataGenCapacity(DataGenTorch[DataOut, Loader]):
         """
         Generate the data.
 
-        Args:
-            N (int): The number of inputs for the model.
-
-        Returns:
-            data (DataOut): A dictionary containing the generated data.
+        :param N: The number of inputs for the model.
+        :type N: int
+        :return: A dictionary containing the generated data.
+        :rtype: DataOut
         """
 
         X, Y = gen_dataset_capacity(
@@ -162,15 +173,12 @@ class DataGenCapacity(DataGenTorch[DataOut, Loader]):
         """
         Convert data to pytorch loader.
 
-        Args:
-            data (DataOut): Output of gen_data.
-            s (int): Current label sample.
-
-        Returns:
-            Loader: Pytorch data loader.
-
-        Raises:
-            ValueError: For invalid data or index s.
+        :param data: Output of gen_data.
+        :type data: DataOut
+        :param s: Current label sample.
+        :type s: int
+        :rtype: Loader
+        :raises ValueError: For invalid data or index s.
         """
         self._check_data(data)
 
@@ -213,15 +221,18 @@ class DataGenFat(DataGenTorch[DataOut, Loader]):
     """
     Generates data for estimating fat shattering dimension.
 
-    Args:
-        prior (DataGenTorch): Data generator for prior X.
-        Sb (int): The number of binary samples to check shattering.
-            Defaults to 10.
-        Sr (int): The number of level offset samples to check shattering.
-            Defaults to 10.
-        gamma (float): The fat shattering parameter gamma.
-            Defaults to 0.0 (pseudo-dimension).
-        kwargs: Keyword arguments passed to the base class.
+    :param prior: Data generator for prior X.
+    :type prior: DataGenTorch
+    :param Sb: The number of binary samples to check shattering.
+        Defaults to 10.
+    :type Sb: int, optional
+    :param Sr: The number of level offset samples to check shattering.
+        Defaults to 10.
+    :type Sr: int, optional
+    :param gamma: The fat shattering parameter gamma.
+        Defaults to 0.0 (pseudo-dimension).
+    :type gamma: float, optional
+    :param kwargs: Keyword arguments passed to the base class.
     """
 
     def __init__(
@@ -243,11 +254,10 @@ class DataGenFat(DataGenTorch[DataOut, Loader]):
         """
         Generate the data.
 
-        Args:
-            d (int): The number of inputs to shatter.
-
-        Returns:
-            data (DataOut): A dictionary containing the generated data.
+        :param d: The number of inputs to shatter.
+        :type d: int
+        :return: A dictionary containing the generated data.
+        :rtype: DataOut
         """
 
         X = self.prior.gen_data(d)
@@ -263,16 +273,15 @@ class DataGenFat(DataGenTorch[DataOut, Loader]):
         """
         Convert data to pytorch loader.
 
-        Args:
-            data (DataOut): Output of gen_data.
-            sr (int): Current r sample.
-            sb (int): Current b sample.
-
-        Returns:
-            Loader: Pytorch data loader.
-
-        Raises:
-            ValueError: For invalid data or indeces sr or sb.
+        :param data: Output of gen_data.
+        :type data: DataOut
+        :param sr: Current r sample.
+        :type sr: int
+        :param sb: Current b sample.
+        :type sb: int
+        :returns: Pytorch data loader.
+        :rtype: Loader
+        :raises ValueError: For invalid data or indeces sr or sb.
         """
         self._check_data(data)
 
@@ -318,19 +327,24 @@ class DataGenRademacher(DataGenTorch[DataOut, Loader]):
     """
     Generates uniform data for estimating the empirical Rademacher complexity.
 
-    Args:
-        prior (PriorTorch): Prior for generating X samples.
-        num_sigma_samples (int, optional): Number of samples for sigma.
+    :param prior: Prior for generating X samples.
+    :type prior: PriorTorch
+    :param num_sigma_samples: Number of samples for sigma.
             Defaults to 10.
-        num_data_samples (int): Number of samples for data sets.
+    :type num_sigma_samples: int, optional
+    :param num_data_samples: Number of samples for data sets.
             Defaults to 10.
-        gamma (float): The fat shattering parameter gamma.
-            Defaults to 0.0 (pseudo-dimension).
-        scale (float, optional): The re-scaling factor for uniform
-            random numbers in [0, 1]. Defaults to 2.0.
-        shift (float, optional): The shift value for uniform
-            random numbers in [0, 1]. Defaults to -1.0.
-        kwargs: Keyword arguments passed to the base class.
+    :type num_data_samples: int, optional
+    :param gamma: The fat shattering parameter gamma
+        Defaults to 0.0 (pseudo-dimension).
+    :type gamma: float, optional
+    :param scale: The re-scaling factor for uniform random numbers in [0, 1].
+        Defaults to 2.0.
+    :type scale: float, optional
+    :param shift: The shift value for uniform random numbers in [0, 1].
+        Defaults to -1.0.
+    :type shift: float, optional
+    :param kwargs: Keyword arguments passed to the base class.
     """
 
     def __init__(
@@ -347,14 +361,13 @@ class DataGenRademacher(DataGenTorch[DataOut, Loader]):
         self.num_data_samples = num_data_samples
 
     def gen_data(self, m: int) -> DataOut:
-        """
-        Generate the data.
+        """Generate the data.
 
-        Args:
-            m (int): Size of data set.
-
-        Returns:
-            data (DataOut): A dictionary containing the generated data.
+        :param m: Size of data set.
+        :type m: int
+        :param m: int:
+        :return: A dictionary containing the generated data.
+        :rtype: DataOut
         """
 
         X = self.prior.gen_data(m * self.num_data_samples)
@@ -372,15 +385,13 @@ class DataGenRademacher(DataGenTorch[DataOut, Loader]):
         """
         Convert data to pytorch loader.
 
-        Args:
-            data (DataOut): Output of gen_data.
-            sr (int): Current X sample.
-
-        Returns:
-            Loader: Pytorch data loader.
-
-        Raises:
-            ValueError: For invalid data or index s.
+        :param data: Output of gen_data.
+        :type data: DataOut
+        :param s: Current sample.
+        :type s: int
+        :return: Pytorch data loader.
+        :rtype: Loader
+        :raises ValueError: For invalid data or index s.
         """
         self._check_data(data)
 
@@ -415,13 +426,15 @@ class UniformPrior(PriorTorch[Tensor]):
     """
     Generates uniform prior X.
 
-    Args:
-        sizex (int): The size of the input data (dim of feature space).
-        scale (float, optional): The re-scaling factor for uniform
-            random numbers in [0, 1]. Defaults to 2.0.
-        shift (float, optional): The shift value for uniform
-            random numbers in [0, 1]. Defaults to -1.0.
-        kwargs: Keyword arguments passed to the base class.
+    :param sizex: The size of the input data (dim of feature space).
+    :type sizex: int
+    :param scale: The re-scaling factor for uniform random numbers in [0, 1].
+        Defaults to 2.0.
+    :type scale: float, optional
+    :param shift: The shift value for uniform random numbers in [0, 1].
+        Defaults to -1.0.
+    :type shift: float, optional
+    :param kwargs: Keyword arguments passed to the base class.
     """
 
     def __init__(
@@ -436,11 +449,10 @@ class UniformPrior(PriorTorch[Tensor]):
         """
         Generate the data.
 
-        Args:
-            m (int): Size of data set.
-
-        Returns:
-            Tensor: Prior X.
+        :param m: Size of data set.
+        :type m: int
+        :return: Prior X.
+        :rtype: Tensor
         """
 
         X = gen_synthetic_features(
@@ -459,13 +471,15 @@ class NormalPrior(PriorTorch[Tensor]):
     """
     Generates normal prior for X.
 
-    Args:
-        sizex (int): The size of the input data (dim of feature space).
-        scale (float, optional): The re-scaling factor for standard normal.
-            Defaults to 1.0.
-        shift (float, optional): The shift value for standard normal.
+    :param sizex: The size of the input data (dim of feature space).
+    :type sizex: int
+    :param scale: The re-scaling factor for standard normal.
+        Defaults to 1.0.
+    :type scale: float, optional
+    :param shift: The shift value for standard normal.
             Defaults to 0.0.
-        kwargs: Keyword arguments passed to the base class.
+    :type shift: float, optional
+    :param kwargs: Keyword arguments passed to the base class.
     """
 
     def __init__(
@@ -480,11 +494,10 @@ class NormalPrior(PriorTorch[Tensor]):
         """
         Generate the data.
 
-        Args:
-            m (int): Size of data set.
-
-        Returns:
-            Tensor: Prior X.
+        :param m: Size of data set.
+        :type m: int
+        :return: Prior X.
+        :rtype: Tensor
         """
 
         X = gen_synthetic_features_normal(
@@ -509,24 +522,28 @@ def gen_dataset_capacity(
     device: Device = torch.device("cpu"),
 ) -> Tuple[Tensor, Tensor]:
     """
-    Generates a dataset of inputs x and outputs y for a QNN.
+    Generates a dataset of input features x and output labels y.
 
-    Args:
-        N (int): The number of inputs for the QNN.
-        sizex (int): The size of each input.
-        num_samples (int): The number of output samples to generate. Defaults to 10.
-        seed (int, optional): The random seed to use for generating the dataset.
-            Defaults to None.
-        scale (float, optional): The re-scaling factor for uniform random numbers
-            in [0,1]. Defaults to 2.0.
-        shift (float, optional): The shift value for uniform random numbers [0,1].
-            Defaults to -1.0.
-        device (Device, optional): Torch device to run on. Defaults to CPU.
-
-    Returns:
-        Tuple[Tensor, Tensor]: A tuple containing the input
-            tensor x of shape (N, sizex) and the output
-        tensor y of shape (num_samples, N).
+    :param N: The number of inputs.
+    :type N: int
+    :param sizex: The dimension of each input.
+    :type sizex: int
+    :param num_samples: The number of output samples to generate. Defaults to 10.
+    :type num_samples: int, optional
+    :param seed: The random seed to use for generating the dataset.
+        Defaults to None.
+    :type seed: int, optional
+    :param scale: The re-scaling factor for uniform random numbers in
+        [0,1]. Defaults to 2.0.
+    :type scale: float, optional
+    :param shift: The shift value for uniform random numbers [0,1].
+        Defaults to -1.0.
+    :type shift: float, optional
+    :param device: Torch device to run on. Defaults to CPU.
+    :type device: Device
+    :return: A tuple containing the input tensor x of shape (N, sizex)
+        and the output (num_samples, N).
+    :rtype: Tuple[Tensor, Tensor]
     """
 
     seed_ = seed
@@ -572,14 +589,15 @@ def generate_samples_b_fat(
     """
     Generate S unique samples of b from {0, 1}^d.
 
-    Args:
-        d (int): Number of input data samples for shattering.
-        S (int): Number of binary samples to check shattering
-            (for scalability if d is large).
-        seed (int, optional): The random seed. Defaults to None.
-
-    Returns:
-        Array: An array of shape (S, d) containing unique samples of b.
+    :param d: Number of input data samples for shattering.
+    :type d: int
+    :param S: Number of binary samples to check shattering (for
+        scalability if d is large).
+    :type S: int
+    :param seed: The random seed. Defaults to None.
+    :type seed: int, optional
+    :return: An array of shape (S, d) containing unique samples of b.
+    :rtype: Array
     """
 
     rng = np.random.default_rng(seed)
@@ -603,13 +621,14 @@ def generate_samples_r_fat(
     """
     Generate S samples of r from [0, 1]^d using Latin Hypercube Sampling.
 
-    Args:
-        d (int): Dimension of the feature space.
-        S (int): Number of samples to generate.
-        seed (int, optional): The random seed. Defaults to None.
-
-    Returns:
-        numpy.ndarray: An array of shape (S, d) containing samples of r.
+    :param d: Dimension of the feature space.
+    :type d: int
+    :param S: Number of samples to generate.
+    :type S: int
+    :param seed: The random seed. Defaults to None.
+    :type seed: int, optional
+    :return: An array of shape (S, d) containing samples of r.
+    :rtype: Array
     """
 
     sampler = qmc.LatinHypercube(d=d, seed=seed)
@@ -628,19 +647,23 @@ def gen_synthetic_features(
     """
     Generates d inputs x of dimension sizex sampled uniformly from scale*[0,1]+shift.
 
-    Args:
-        d (int): The number of inputs x to generate.
-        sizex (int): The size of each input.
-        seed (int, optional): The random seed to use for generating the features.
-            Defaults to None.
-        scale (float, optional): The re-scaling factor for uniform random numbers
-            in [0,1]. Defaults to 2.0.
-        shift (float, optional): The shift value for uniform random numbers [0,1].
-            Defaults to -1.0.
-        device (Device, optional): Torch device to run on. Defaults to CPU.
-
-    Returns:
-        Tensor: Tensor X of shape (d, sizex).
+    :param d: The number of inputs x to generate.
+    :type d: int
+    :param sizex: The size of each input.
+    :type sizex: int
+    :param seed: The random seed to use for generating the features.
+        Defaults to None.
+    :type seed: int, optional
+    :param scale: The re-scaling factor for uniform random numbers in
+        [0,1]. Defaults to 2.0.
+    :type scale: float, optional
+    :param shift: The shift value for uniform random numbers [0,1].
+        Defaults to -1.0.
+    :type shift: float, optional
+    :param device: Torch device to run on. Defaults to CPU.
+    :type device: Device
+    :return: Tensor X of shape (d, sizex).
+    :rtype: Tensor
     """
 
     seed_ = seed
@@ -676,19 +699,23 @@ def gen_synthetic_features_normal(
     """
     Generates d inputs x of dimension sizex sampled from N(shift, scale^2).
 
-    Args:
-        d (int): The number of inputs x to generate.
-        sizex (int): The size of each input.
-        seed (int, optional): The random seed to use for generating the features.
-            Defaults to None.
-        scale (float, optional): The re-scaling factor for uniform random numbers
-            in [0,1]. Defaults to 1.0.
-        shift (float, optional): The shift value for uniform random numbers [0,1].
-            Defaults to 0.0.
-        device (Device, optional): Torch device to run on. Defaults to CPU.
-
-    Returns:
-        Tensor: Tensor X of shape (d, sizex).
+    :param d: The number of inputs x to generate.
+    :type d: int
+    :param sizex: The size of each input.
+    :type sizex: int
+    :param seed: The random seed to use for generating the features.
+        Defaults to None.
+    :type seed: int, optional
+    :param scale: The re-scaling factor for uniform random numbers in
+        [0,1]. Defaults to 1.0.
+    :type scale: float, optional
+    :param shift: The shift value for uniform random numbers [0,1].
+        Defaults to 0.0.
+    :type shift: float, optional
+    :param device: Torch device to run on. Defaults to CPU.
+    :type device: Device, optional
+    :return: Tensor X of shape (d, sizex).
+    :rtype: Tensor
     """
 
     seed_ = seed
@@ -723,20 +750,20 @@ def gen_synthetic_labels_fat(
     Generate constant label values equal to r_i + gamma
     when b_i = 1 and r_i - gamma when b_i = 0.
 
-    Args:
-        b (Array): An array of shape (Sb,d)
+    :param b: An array of shape (Sb,d)
             containing Sb samples of d-dim binary values.
-        r (Array): An array of shape (Sr,d)
+    :type b: Array
+    :param r: An array of shape (Sr,d)
             containing Sr samples of d-dim real values in [0, 1].
-        gamma (float, optional): The fat-shattering margin value.
+    :type r: Array
+    :param gamma: The fat-shattering margin value.
             Defaults to 0.0.
-        device (Device, optional): Torch device to run on. Defaults to CPU.
-
-    Returns:
-        Tensor: Y of shape (Sr, Sb, d).
-
-    Raises:
-        ValueError: If the length of b[0] is not the same as the length of r[0].
+    :type gamma: float, optional
+    :param device: Torch device to run on. Defaults to CPU.
+    :type device: Device, optional
+    :return: Y of shape (Sr, Sb, d).
+    :rtype: Tensor
+    :raises ValueError: If the length of b[0] is not the same as the length of r[0].
     """
 
     Sb = len(b)
@@ -770,14 +797,15 @@ def gen_sigmas(
     """
     Random vector of +-1.
 
-    Args:
-        m (int): Number of sigmas.
-        seed (int, optional): The random seed to use for generating the features.
-            Defaults to None.
-        device (Device, optional): Torch device to run on. Defaults to CPU.
-
-    Returns:
-        Tensor: Tensor of sigmas.
+    :param m: Number of sigmas.
+    :type m: int
+    :param seed: The random seed to use for generating the features.
+        Defaults to None.
+    :type seed: int, optional
+    :param device: Torch device to run on. Defaults to CPU.
+    :type device: Device, optional
+    :return: Tensor of sigmas.
+    :rtype: Tensor
     """
 
     seed_ = seed

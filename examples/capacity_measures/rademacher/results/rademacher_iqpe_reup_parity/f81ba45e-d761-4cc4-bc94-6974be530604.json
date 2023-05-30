@@ -1,0 +1,1 @@
+{"date": "14/05/2023, 19:02:21", "time_taken": 12.943140983581543, "cdevice": "cpu", "num_qubits": 3, "num_layers": 1, "num_reups": 1, "omega": 0.0, "m": 2, "num_params_gates": 7, "num_params_obs": 8, "num_params": 15, "num_data_samples": 5, "num_sigma_samples": 10, "opt_steps": 300, "opt_stop": 1e-16, "seed": 0, "rademacher": 1.1234930753707886}

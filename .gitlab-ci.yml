@@ -17,9 +17,8 @@ cache:
 
 before_script:
   - python --version ; pip --version  # For debugging
-  - pip install virtualenv
-  - virtualenv venv
-  - source venv/bin/activate
+  - pip install poetry
+  - poetry install
 
 test:
   script:

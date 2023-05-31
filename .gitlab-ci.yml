@@ -1,0 +1,23 @@
+stages:
+  - build
+  - test
+  # - deploy
+
+build-job:
+  stage: build
+  script:
+    - pip install poetry
+    - poetry install
+
+test-job:
+  stage: test
+  script:
+    - poetry run pytest
+
+# deploy-job:
+#   stage: deploy
+#   only:
+#     - main
+#   script:
+#     - poetry build
+#     - poetry publish

@@ -20,7 +20,6 @@ cache:
 before_script:
   - python --version ; pip --version  # For debugging
   - pip install poetry
-  - poetry env use 3.9
   - poetry install
 
 test:

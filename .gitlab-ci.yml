@@ -24,7 +24,7 @@ before_script:
 test:
   script:
     - pip install pytest  # you can also use tox
-    - pytest test/
+    - pytest tests/
 
 pages:
   script:

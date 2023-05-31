@@ -21,8 +21,6 @@ cache:
 before_script:
   - python --version ; pip --version  # For debugging
   - pip install poetry
-  - poetry config cache-dir $POETRY_HOME
-  - poetry config virtualenvs.in-project true
   - poetry install
 
 test:

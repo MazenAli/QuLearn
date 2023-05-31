@@ -6,8 +6,7 @@ image: bitnami/pytorch:latest
 # only cache local items.
 variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
-  POETRY_HOME: "$CI_PROJECT_DIR/.poetry"
-
+ 
 # Pip's cache doesn't store the python packages
 # https://pip.pypa.io/en/stable/topics/caching/
 #
@@ -21,6 +20,7 @@ cache:
 before_script:
   - python --version ; pip --version  # For debugging
   - pip install poetry
+  - poetry env use 3.9
   - poetry install
 
 test:

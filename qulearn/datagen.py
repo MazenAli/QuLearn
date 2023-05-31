@@ -55,8 +55,8 @@ class DataGenTorch(ABC, Generic[D, L]):
         """
         Generate the data.
 
-        :param *args.
-        :param **kwargs.
+        :param args: Variable length argument list.
+        :param kwargs: Arbitrary keyword arguments.
         :returns: The generated data.
         :rtype: D
         """
@@ -67,8 +67,8 @@ class DataGenTorch(ABC, Generic[D, L]):
         """
         Convert data from gen_data to pytorch data loader.
 
-        :param *args.
-        :param **kwargs.
+        :param args: Variable length argument list.
+        :param kwargs: Arbitrary keyword arguments.
         :returns: Data loader.
         :rtype: L
         """
@@ -104,8 +104,8 @@ class PriorTorch(ABC, Generic[D]):
         """
         Generate the data.
 
-        :param *args.
-        :param **kwargs.
+        :param args: Variable length argument list.
+        :param kwargs: Arbitrary keyword arguments.
         :returns: The generated data.
         :rtype: D
         """

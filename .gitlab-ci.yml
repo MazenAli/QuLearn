@@ -1,12 +1,21 @@
-image: python:3.9-slim-buster
+# Official language image. Look for the different tagged releases at:
+# https://hub.docker.com/r/library/python/tags/
+image: pytorch/pytorch:latest
 
+# Change pip's cache directory to be inside the project directory since we can
+# only cache local items.
 variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
-  
+
+# Pip's cache doesn't store the python packages
+# https://pip.pypa.io/en/stable/topics/caching/
+#
+# If you want to also cache the installed packages, you have to install
+# them in a virtualenv and cache it as well.
 cache:
   paths:
     - .cache/pip
-    - .venv
+    - venv/
 
 before_script:
   - python --version ; pip --version  # For debugging
@@ -16,12 +25,13 @@ before_script:
 
 test:
   script:
+    - poetry install -E pytest
     - poetry run pytest
 
 pages:
   script:
-    - poetry install -E docs
-    - cd docs
+    - poetry install -E sphinx sphinx-rtd-theme
+    - cd doc
     - make html
     - mv build/html/ ../public/
   artifacts:
@@ -30,10 +40,7 @@ pages:
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
-
 #deploy:
 #  stage: deploy
-#  script:
-#     - poetry build
-#     - poetry publish
+#  script: echo "Define your deployment script!"
 #  environment: production

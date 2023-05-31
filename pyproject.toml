@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{include = "qulearn"}]
 
 [tool.poetry.dependencies]
-python = ">= 3.9, < 3.11"
+python = "^3"
 pythreejs = "^2.4.1"
 ipywidgets = "7.7.1"
 matplotlib = "^3.6.3"

@@ -1,23 +1,39 @@
-stages:
-  - build
-  - test
-  # - deploy
+image: python:3.9-slim-buster
 
-build-job:
-  stage: build
-  script:
-    - pip install poetry
-    - poetry install
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  
+cache:
+  paths:
+    - .cache/pip
+    - .venv
 
-test-job:
-  stage: test
+before_script:
+  - python --version ; pip --version  # For debugging
+  - pip install poetry
+  - poetry config virtualenvs.in-project true
+  - poetry install
+
+test:
   script:
     - poetry run pytest
 
-# deploy-job:
-#   stage: deploy
-#   only:
-#     - main
-#   script:
+pages:
+  script:
+    - poetry install -E docs
+    - cd docs
+    - make html
+    - mv build/html/ ../public/
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+
+#deploy:
+#  stage: deploy
+#  script:
 #     - poetry build
 #     - poetry publish
+#  environment: production

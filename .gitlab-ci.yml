@@ -13,6 +13,7 @@ build:
   stage: build
   script:
     - poetry install
+    - poetry install --no-interaction --no-ansi --dev
 
 test:
   stage: test

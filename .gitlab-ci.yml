@@ -1,43 +1,19 @@
-# Official language image. Look for the different tagged releases at:
-# https://hub.docker.com/r/library/python/tags/
-image: bitnami/pytorch:latest
+image: nvidia/cuda:10.2-base
 
-variables:
-  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
-
-# Pip's cache doesn't store the python packages
-# https://pip.pypa.io/en/stable/topics/caching/
-#
-# If you want to also cache the installed packages, you have to install
-# them in a virtualenv and cache it as well.
-cache:
-  paths:
-    - .cache/pip
-    - venv/
+stages:
+  - build
+  - test
 
 before_script:
-  - python --version ; pip --version  # For debugging
+  - python -V
   - pip install poetry
-  - poetry install
+
+build:
+  stage: build
+  script:
+    - poetry install
 
 test:
+  stage: test
   script:
-    - pip install pytest  # you can also use tox
-    - pytest tests/
-
-pages:
-  script:
-    - poetry install -E sphinx sphinx-rtd-theme
-    - cd doc
-    - make html
-    - mv build/html/ ../public/
-  artifacts:
-    paths:
-      - public
-  rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-
-#deploy:
-#  stage: deploy
-#  script: echo "Define your deployment script!"
-#  environment: production
+    - poetry run pytest

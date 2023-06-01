@@ -12,8 +12,7 @@ before_script:
 build:
   stage: build
   script:
-    - poetry install
-    - poetry install --no-interaction --no-ansi --dev
+    - poetry install --with test
 
 test:
   stage: test

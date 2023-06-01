@@ -4,14 +4,12 @@ stages:
   - build
   - test
 
-before_script:
-  - python -V
-  - pip install poetry
-  - pip install torch --index-url https://download.pytorch.org/whl/cpu
-
 build:
   stage: build
   script:
+    - python -V
+    - pip install poetry
+    - pip install torch --index-url https://download.pytorch.org/whl/cpu
     - poetry install --with test
 
 test:

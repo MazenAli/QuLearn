@@ -1,19 +1,10 @@
 image: python:latest
 
-stages:
-  - build
-  - test
-
 before_script:
   - python -V
   - pip install poetry
+  - pip install nvidia-cublas-cu11-11.10.3.66 nvidia-cuda-nvrtc-cu11-11.7.99 nvidia-cuda-runtime-cu11-11.7.99 nvidia-cudnn-cu11-8.5.0.96
   - poetry install --with test
-  - export CUDA_VISIBLE_DEVICES=""
-
-build:
-  stage: build
-  script:
-    - echo "build completed"
 
 test:
   stage: test

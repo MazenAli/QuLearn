@@ -2,11 +2,9 @@ image: python:latest
 
 before_script:
   - python -V
-  - pip install poetry
-  - poetry install --with test
   - pip install .
 
 test:
   stage: test
   script:
-    - poetry run pytest
+    - pytest tests/

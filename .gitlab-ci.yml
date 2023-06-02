@@ -6,11 +6,11 @@ stages:
 
 before_script:
   - python -V
-  - pip install .
 
 test:
   stage: test
   script:
+    - pip install .
     - pip install pytest
     - pytest tests/
   rules:

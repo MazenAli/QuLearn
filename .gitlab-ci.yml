@@ -1,8 +1,10 @@
-image: pytorch/pytorch:latest
+image: python:latest
 
 before_script:
   - python -V
+  - pip install pytest
   - pip install .
+
 
 test:
   stage: test

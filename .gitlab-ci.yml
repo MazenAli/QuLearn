@@ -2,11 +2,16 @@ image: python:latest
 
 before_script:
   - python -V
-  - pip install pytest
   - pip install .
 
 
 test:
   stage: test
   script:
+    - pip install pytest
     - pytest tests/
+
+docs:
+  script:
+    - pip install sphinx
+    - make html

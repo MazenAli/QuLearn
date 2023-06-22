@@ -83,6 +83,13 @@ def test_mc_integrate_fim_trace_correct(setup_data):
     assert expected == pytest.approx(integral.item(), abs=1e-4)
 
 
+def test_half_log_det(setup_data):
+    half_log = half_log_det(setup_data[0][0], torch.tensor(2.0))
+    expected = math.log(3)
+
+    assert expected == pytest.approx(half_log.item(), abs=1e-4)
+
+
 def test_mc_integrate_fim_trace_weights_length_mismatch(setup_data):
     with pytest.raises(ValueError):
         mc_integrate_fim_trace(setup_data[0], setup_data[2])

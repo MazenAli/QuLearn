@@ -17,7 +17,6 @@ def test_normalize_const():
     assert isinstance(C, float)
     assert C > 0.0
 
-
 def test_check_shattering():
     sizex = 3
     d = 2
@@ -35,7 +34,6 @@ def test_check_shattering():
 
     shattered = check_shattering(model, datagen, trainer, d, gamma)
     assert shattered
-
 
 def test_fat_shattering_dim():
     sizex = 3
@@ -57,7 +55,6 @@ def test_fat_shattering_dim():
     )
     assert isinstance(fat_shattering_dimension, int)
     assert fat_shattering_dimension > 0
-
 
 def test_linear_model():
     sizex = 3

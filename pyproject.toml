@@ -12,7 +12,7 @@ pythreejs = "^2.4.1"
 ipywidgets = "7.7.1"
 matplotlib = "^3.6.3"
 pennylane = "^0.28.0"
-torch = "^2"
+torch = "2.0"
 pyyaml = "^6.0"
 pennylane-lightning = "^0.29.0"
 torch-tb-profiler = "^0.4.1"
@@ -40,6 +40,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "scipy.stats"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "toml"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

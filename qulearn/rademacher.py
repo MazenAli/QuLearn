@@ -9,16 +9,16 @@ import pennylane as qml
 
 from .datagen import DataGenRademacher
 from .loss import RademacherLoss
-from .trainer import Trainer
+from .trainer import SupervisedTrainer
 
 Model: TypeAlias = qml.QNode
 Tensor: TypeAlias = torch.Tensor
-Tr: TypeAlias = Trainer
+Trainer: TypeAlias = SupervisedTrainer
 Datagen: TypeAlias = DataGenRademacher
 
 
 def rademacher(
-    model: Model, trainer: Tr, X: Tensor, sigmas: Tensor, datagen: Datagen
+    model: Model, trainer: Trainer, X: Tensor, sigmas: Tensor, datagen: Datagen
 ) -> Tensor:
     """
     Estimate Rademacher complexity of a given model.
@@ -26,7 +26,7 @@ def rademacher(
     :param model: Prediction model.
     :type model: Model
     :param trainer: The trainer.
-    :type trainer: Tr
+    :type trainer: Trainer
     :param X: Data tensor of size (num_data_samples, size_data_set, dim_feature)
     :type X: Tensor
     :param sigmas: Sigmas tensor of size (num_sigma_samples, size_data_set)
@@ -51,9 +51,9 @@ def rademacher(
             loader = datagen.data_to_loader(data, m)
 
             trainer.train(model, loader, loader)
-            predictions = model(X_)
-
-            sum += -loss_fn(predictions)
+            with torch.no_grad():
+                predictions = model(X_)
+                sum += -loss_fn(predictions)
 
     sum /= num_data_samples * num_sigma_samples
 

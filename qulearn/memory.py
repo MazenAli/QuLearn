@@ -6,25 +6,25 @@ try:
 except ImportError:
     from typing_extensions import TypeAlias
 
-import warnings
+import logging
 import torch
 from torch.nn import Module
 import numpy as np
 
-from .trainer import Trainer
+from .trainer import SupervisedTrainer
 from .datagen import DataGenCapacity
 
 Tensor: TypeAlias = torch.Tensor
 Model: TypeAlias = Module
 Datagen: TypeAlias = DataGenCapacity
-Tr: TypeAlias = Trainer
+Trainer: TypeAlias = SupervisedTrainer
 Capacity = List[Tuple[int, float, int, int]]
 
 
 def memory(
     model: Model,
     datagen: Datagen,
-    trainer: Tr,
+    trainer: Trainer,
     Nmin: int,
     Nmax: int,
     Nstep: int = 1,
@@ -39,7 +39,7 @@ def memory(
     :param datagen: The (synthetic) data generator.
     :type datagen: Datagen
     :param trainer: The trainer.
-    :type trainer: Tr
+    :type trainer: Trainer
     :param Nmin: The minimum value of N.
     :type Nmin: int
     :param Nmax: The maximum value of N, included.
@@ -71,7 +71,8 @@ def memory(
         if C <= Cprev and N != Nmax and early_stop:
             count += 1
             if count >= stop_count:
-                warnings.warn("Stopping early, capacity not improving.")
+                logging.basicConfig(level=logging.WARNING)
+                logging.warning("Stopping early, capacity not improving.")
                 break
         else:
             count = 0
@@ -81,7 +82,7 @@ def memory(
     return capacities
 
 
-def fit_rand_labels(model: Model, datagen: Datagen, trainer: Tr, N: int) -> float:
+def fit_rand_labels(model: Model, datagen: Datagen, trainer: Trainer, N: int) -> float:
     """
     Fits random labels to a model and returns the mean relative error.
 
@@ -90,7 +91,7 @@ def fit_rand_labels(model: Model, datagen: Datagen, trainer: Tr, N: int) -> floa
     :param datagen: The data generation class.
     :type datagen: Datagen
     :param trainer: The trainer.
-    :type trainer: Tr
+    :type trainer: Trainer
     :param N: The number of inputs.
     :type N: int
     :return: The mean relative error.
@@ -100,20 +101,10 @@ def fit_rand_labels(model: Model, datagen: Datagen, trainer: Tr, N: int) -> floa
     data = datagen.gen_data(N)
     X = data["X"]
     Y = data["Y"]
-
-    path = None
-    if trainer.best_loss:
-        path = f"{trainer.file_name}_bestmre"
-
     mre_sample = []
     for s in range(datagen.num_samples):
         loader = datagen.data_to_loader(data, s)
         trainer.train(model, loader, loader)
-
-        if path is not None:
-            state = torch.load(path)
-            model.load_state_dict(state)
-
         y_pred = model(X)
         mre = torch.mean(torch.abs((Y[s] - y_pred) / y_pred))
         mre_sample.append(mre.item())

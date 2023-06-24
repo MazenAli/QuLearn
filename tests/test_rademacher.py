@@ -1,10 +1,11 @@
+import logging
+import math
 import torch
 from torch.nn import Linear
 from torch.optim import Adam
-import math
 
 from qulearn.rademacher import rademacher
-from qulearn.trainer import RegressionTrainer
+from qulearn.trainer import SupervisedTrainer
 from qulearn.loss import RademacherLoss
 from qulearn.datagen import NormalPrior, DataGenRademacher
 
@@ -23,14 +24,21 @@ def test_rademacher():
     data = datagen.gen_data(m)
     loss_fn = RademacherLoss(data["sigmas"][0])
     opt = Adam(model.parameters(), lr=0.1, amsgrad=True)
-    trainer = RegressionTrainer(
-        opt, loss_fn, num_epochs=500, opt_stop=1e-18, best_loss=False
+    metrics = {"Loss": loss_fn}
+    logger = logging.getLogger(__name__)
+    logger.setLevel(level=logging.INFO)
+    trainer = SupervisedTrainer(
+        opt, loss_fn=loss_fn, metrics=metrics, num_epochs=100, logger=logger
     )
 
     # Call function
     radval = rademacher(model, trainer, data["X"], data["sigmas"], datagen)
-    d = sizex + 1
-    bound = math.sqrt(2 * d * math.log(math.e * m / d) / m)
+    X = data["X"]
+    X_reshaped = X.view(-1, X.shape[2])
+    norms = torch.norm(X_reshaped, dim=1, p=2)
+    B = torch.max(norms)
+    W = math.sqrt(sum(p.norm(p=2).item() ** 2 for p in model.parameters()))
+    bound = B * W / math.sqrt(num_data_samples)
 
     assert radval.item() > 0.0
-    assert radval.item() <= bound
+    assert radval.item() <= bound.item()

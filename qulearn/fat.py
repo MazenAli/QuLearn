@@ -4,23 +4,23 @@ try:
 except ImportError:
     from typing_extensions import TypeAlias
 
-import warnings
+import logging
 import torch
 import pennylane as qml
 
 from .datagen import DataGenFat
-from .trainer import Trainer
+from .trainer import SupervisedTrainer
 
 Tensor: TypeAlias = torch.Tensor
 Model: TypeAlias = qml.QNode
 Datagen: TypeAlias = DataGenFat
-Tr: TypeAlias = Trainer
+Trainer: TypeAlias = SupervisedTrainer
 
 
 def fat_shattering_dim(
     model: Model,
     datagen: Datagen,
-    trainer: Tr,
+    trainer: Trainer,
     dmin: int,
     dmax: int,
     gamma: float = 0.0,
@@ -34,7 +34,7 @@ def fat_shattering_dim(
     :param datagen: The (synthetic) data generator.
     :type datagen: Datagen
     :param trainer: The trainer.
-    :type trainer: Tr
+    :type trainer: Trainer
     :param dmin: Iteration start for dimension check.
     :type dmin: int
     :param dmax: Iteration stop for dimension check (including).
@@ -52,17 +52,19 @@ def fat_shattering_dim(
 
         if not shattered:
             if d == dmin:
-                warnings.warn(f"Stopped at dmin = {dmin}.")
+                logging.basicConfig(level=logging.WARNING)
+                logging.warning(f"Stopped at dmin = {dmin}.")
                 return 0
 
             return d - 1
 
-    warnings.warn(f"Reached dmax = {dmax}.")
+    logging.basicConfig(level=logging.WARNING)
+    logging.warning(f"Reached dmax = {dmax}.")
     return dmax
 
 
 def check_shattering(
-    model: Model, datagen: Datagen, trainer: Tr, d: int, gamma: float
+    model: Model, datagen: Datagen, trainer: Trainer, d: int, gamma: float
 ) -> bool:
     """
     Check if the model shatters a given dimension d with margin value gamma.
@@ -72,7 +74,7 @@ def check_shattering(
     :param datagen: The (synthetic) data generator.
     :type datagen: Datagen
     :param trainer: The trainer.
-    :type trainer: Tr
+    :type trainer: Trainer
     :param d: Size of data set to shatter.
     :type d: int
     :param gamma: The margin value.
@@ -87,19 +89,12 @@ def check_shattering(
     r = data["r"]
 
     path = None
-    if trainer.best_loss:
-        path = f"{trainer.file_name}_bestmre"
 
     for sr in range(len(r)):
         shattered = True
         for sb in range(len(b)):
             loader = datagen.data_to_loader(data, sr, sb)
             trainer.train(model, loader, loader)
-
-            if path is not None:
-                state = torch.load(path)
-                model.load_state_dict(state)
-
             predictions = model(X)
 
             for i, pred in enumerate(predictions):

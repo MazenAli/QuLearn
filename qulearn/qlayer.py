@@ -115,6 +115,7 @@ class MeasurementLayer(nn.Module):
         self.measurement_type = measurement_type
         self.observable = observable
         self.interface = kwargs.pop("interface", "torch")
+        self.diff_method = kwargs.pop("diff_method", "backprop")
         self.kwargs = kwargs
         self.qnode = None
 
@@ -138,14 +139,9 @@ class MeasurementLayer(nn.Module):
                 if self.measurement_type == MeasurementType.Expectation:
                     out = torch.unsqueeze(out, 0)
             else:
-                Nx = x.size(0)
-                outs = []
-                for k in range(Nx):
-                    out_k = qnode(x[k])
-                    if self.measurement_type == MeasurementType.Expectation:
-                        out_k = torch.unsqueeze(out_k, 0)
-                    outs.append(out_k)
-
+                outs = [qnode(xk) for xk in torch.unbind(x)]
+                if self.measurement_type == MeasurementType.Expectation:
+                    outs = [torch.unsqueeze(out, 0) for out in outs]
                 out = torch.stack(outs)
         elif self.measurement_type == MeasurementType.Expectation:
             out = qnode(x)
@@ -213,7 +209,11 @@ class MeasurementLayer(nn.Module):
             circuit = self.samples
 
         qnode = qml.QNode(
-            circuit, self.qdevice, interface=self.interface, **self.kwargs
+            circuit,
+            self.qdevice,
+            interface=self.interface,
+            diff_method=self.diff_method,
+            **self.kwargs,
         )
         self.qnode = qnode
         return self.qnode

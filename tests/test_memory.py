@@ -8,7 +8,7 @@ from qulearn.qlayer import IQPEmbeddingLayer, RYCZLayer, HamiltonianLayer
 from qulearn.observable import parities_all_observables
 from qulearn.memory import memory, fit_rand_labels
 from qulearn.datagen import DataGenCapacity
-from qulearn.trainer import RegressionTrainer
+from qulearn.trainer import SupervisedTrainer
 
 
 def test_capacity_qnn():
@@ -31,14 +31,13 @@ def test_capacity_qnn():
 
     loss_fn = torch.nn.MSELoss()
     opt = Adam(model.parameters(), lr=0.1, amsgrad=True)
+    metrics = {"Loss": loss_fn}
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, "model")
-        trainer = RegressionTrainer(opt, loss_fn, num_epochs=20, file_name=path)
-        C = memory(model, datagen, trainer, Nmin, Nmax)
-        assert isinstance(C, List)
-        assert C[0][3] <= 100
-        assert C[0][3] >= 0
+    trainer = SupervisedTrainer(opt, loss_fn=loss_fn, metrics=metrics, num_epochs=100)
+    C = memory(model, datagen, trainer, Nmin, Nmax)
+    assert isinstance(C, List)
+    assert C[0][3] <= 100
+    assert C[0][3] >= 0
 
 
 def test_capacity_linear():
@@ -54,7 +53,8 @@ def test_capacity_linear():
     loss_fn = torch.nn.MSELoss()
     model = Linear(sizex, 1, dtype=torch.float64)
     opt = Adam(model.parameters(), lr=0.1, amsgrad=True)
-    trainer = RegressionTrainer(opt, loss_fn, num_epochs=500, best_loss=False)
+    metrics = {"Loss": loss_fn}
+    trainer = SupervisedTrainer(opt, loss_fn=loss_fn, metrics=metrics, num_epochs=100)
     C = memory(model, datagen, trainer, Nmin, Nmax, stop_count=2)
 
     assert isinstance(C, List)
@@ -81,7 +81,8 @@ def test_fit_labels():
 
     loss_fn = torch.nn.MSELoss()
     opt = Adam(model.parameters(), lr=0.1, amsgrad=True)
-    trainer = RegressionTrainer(opt, loss_fn, num_epochs=10, best_loss=False)
+    metrics = {"Loss": loss_fn}
+    trainer = SupervisedTrainer(opt, loss_fn=loss_fn, metrics=metrics, num_epochs=100)
     mre = fit_rand_labels(model, datagen, trainer, N)
 
     assert isinstance(mre, float)

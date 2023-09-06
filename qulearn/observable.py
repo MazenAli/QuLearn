@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple, Sequence
 
 # for python < 3.10
 try:
@@ -13,10 +13,12 @@ import pennylane as qml
 from .utils import all_bin_sequences
 
 Tensor: TypeAlias = torch.Tensor
-Observable: TypeAlias = qml.Hamiltonian
+Observable: TypeAlias = qml.operation.Observable
+Hamiltonian: TypeAlias = qml.Hamiltonian
+ParitySequence: TypeAlias = Sequence[Tuple[int, ...]]
 
 
-def parity_all_hamiltonian(num_qubits: int, weights: Tensor) -> Observable:
+def parity_all_hamiltonian(num_qubits: int, weights: Tensor) -> Hamiltonian:
     """
     Hamiltonian corresponding to the parity of all combinations of Pauli Z operators.
 
@@ -59,8 +61,23 @@ def parities_all_observables(n: int) -> List[Observable]:
     """
 
     seq = all_bin_sequences(n)
+    return sequence2parity_observable(seq)
+
+
+def sequence2parity_observable(parity_sequence: ParitySequence) -> List[Observable]:
+    """
+    Generates a list of observables corresponding to the parity of
+    the indeces defined by the sequence.
+
+    :param parity_sequence: The sequence of Z parities.
+    :type parity_sequence: ParitySequence
+    :return: A list of observables corresponding to the parity of all
+        possible binary combinations of n qubits plus Idenity.
+    :rtype: List[Observable]
+    """
+
     ops = []
-    for par in seq:
+    for par in parity_sequence:
         if par:
             tmp = qml.PauliZ(par[0])
             if len(par) > 1:

@@ -7,8 +7,13 @@ from qulearn.qlayer import (
     MeasurementLayer,
     IQPEmbeddingLayer,
     RYCZLayer,
-    EmbedVarLayer,
+    AltRotCXLayer,
+    IQPERYCZLayer,
+    IQPEAltRotCXLayer,
     HamiltonianLayer,
+    HadamardLayer,
+    ParallelIQPEncoding,
+    ParallelEntangledIQPEncoding,
 )
 
 
@@ -138,35 +143,78 @@ def test_rycz_layer_circuit():
     assert layer.circuit(x) is None
 
 
+# Unit tests for AltRotCXLayer class
+
+
+def test_altrotcx_layer_init():
+    wires = 3
+    layer = AltRotCXLayer(wires)
+    assert layer.n_layers == 1
+    assert layer.wires == list(range(wires))
+    assert layer.initial_layer_weights is not None
+    assert layer.weights is not None
+
+
+def test_altrotcx_layer_circuit():
+    wires = 3
+    layer = AltRotCXLayer(wires)
+    x = torch.tensor([0.1, 0.2, 0.3])
+    assert layer.circuit(x) is None
+
+
 # Unit tests for EmbedVarLayer class
 
 
 @pytest.fixture(scope="function")
-def mock_embed_var_layer():
-    embed = CircuitLayer(2)
-    var = CircuitLayer(2)
-    yield EmbedVarLayer(embed, var)
+def mock_embed_ryczvar_layer():
+    yield IQPERYCZLayer(wires=2, num_repeat=3)
 
 
-def test_embed_var_layer_init(mock_embed_var_layer):
-    layer = mock_embed_var_layer
-    assert layer.embed is not None
-    assert layer.var is not None
-    assert layer.n_repeat == 1
+@pytest.fixture(scope="function")
+def mock_embed_altrotvar_layer():
+    yield IQPEAltRotCXLayer(wires=2, num_repeat=3)
+
+
+def test_embed_ryczvar_layer_init(mock_embed_ryczvar_layer):
+    layer = mock_embed_ryczvar_layer
+    assert layer.num_repeat == 3
     assert layer.wires == list(range(2))
 
 
-def test_embed_var_layer_circuit(mock_embed_var_layer):
-    layer = mock_embed_var_layer
+def test_embed_altrotvar_layer_init(mock_embed_altrotvar_layer):
+    layer = mock_embed_altrotvar_layer
+    assert layer.num_repeat == 3
+    assert layer.wires == list(range(2))
+
+
+def test_embed_ryczvar_layer_circuit(mock_embed_ryczvar_layer):
+    layer = mock_embed_ryczvar_layer
     x = torch.tensor([0.1, 0.2])
     assert layer.circuit(x) is None
 
 
-def test_embed_var_layer_check_wires():
-    embed = CircuitLayer(2)
-    var = CircuitLayer(3)
-    with pytest.raises(ValueError):
-        EmbedVarLayer(embed, var)
+def test_embed_altrotvar_layer_circuit(mock_embed_altrotvar_layer):
+    layer = mock_embed_altrotvar_layer
+    x = torch.tensor([0.1, 0.2])
+    assert layer.circuit(x) is None
+
+
+def test_embed_ryczvar_layer_num_parameters(mock_embed_ryczvar_layer):
+    layer = mock_embed_ryczvar_layer
+    x = torch.tensor([0.1, 0.2])
+    num_parameters = sum(p.numel() for p in layer.parameters())
+    num_qubits = len(layer.wires)
+    expected = layer.num_repeat * (num_qubits + 2 * (num_qubits - 1))
+    assert expected == num_parameters
+
+
+def test_embed_altrotvar_layer_num_parameters(mock_embed_altrotvar_layer):
+    layer = mock_embed_altrotvar_layer
+    x = torch.tensor([0.1, 0.2])
+    num_parameters = sum(p.numel() for p in layer.parameters())
+    num_qubits = len(layer.wires)
+    expected = layer.num_repeat * 3 * (num_qubits + 2 * (num_qubits - 1))
+    assert expected == num_parameters
 
 
 # Unit tests for HamiltonianLayer class
@@ -224,3 +272,74 @@ def test_trivial_output():
     x = torch.zeros(wires)
     y = ham_layer(x)
     assert 2 == pytest.approx(y.item())
+
+
+def test_hadamard_layer():
+    wires = qml.wires.Wires(range(3))
+    layer = HadamardLayer(wires)
+
+    # Testing that the qfunc is indeed Hadamard
+    assert layer.qfunc == qml.Hadamard
+
+    # Testing circuit application
+    @qml.qnode(qml.device("default.qubit", wires=wires))
+    def circuit():
+        layer.circuit()
+        return qml.probs(wires=wires)
+
+    probs = circuit()
+    assert 0.125 == pytest.approx(
+        probs
+    )  # Should be equal probabilities for all 8 states
+
+
+def test_parallel_iqp_encoding():
+    wires = qml.wires.Wires(range(4))
+    num_features = 2
+
+    # Testing ValueError for wrong number of features
+    with pytest.raises(ValueError):
+        layer = ParallelIQPEncoding(wires, 5)
+
+    # Testing ValueError for wrong wires number
+    with pytest.raises(ValueError):
+        layer = ParallelIQPEncoding(qml.wires.Wires(range(3)), 2)
+
+    layer = ParallelIQPEncoding(wires, num_features)
+    assert layer.qfunc == qml.IQPEmbedding
+
+    # Testing circuit application
+    x = torch.tensor([1, 2], dtype=torch.float32)
+
+    @qml.qnode(qml.device("default.qubit", wires=wires))
+    def circuit():
+        layer.circuit(x)
+        return qml.probs(wires=wires)
+
+    circuit()  # Shouldn't raise any error
+
+
+def test_parallel_entangled_iqp_encoding():
+    wires = qml.wires.Wires(range(4))
+    num_features = 2
+
+    # Testing ValueError for wrong number of features
+    with pytest.raises(ValueError):
+        layer = ParallelEntangledIQPEncoding(wires, 5)
+
+    # Testing ValueError for wrong wires number
+    with pytest.raises(ValueError):
+        layer = ParallelEntangledIQPEncoding(qml.wires.Wires(range(3)), 2)
+
+    layer = ParallelEntangledIQPEncoding(wires, num_features)
+    assert layer.qfunc == qml.IQPEmbedding
+
+    # Testing circuit application
+    x = torch.tensor([1, 2], dtype=torch.float32)
+
+    @qml.qnode(qml.device("default.qubit", wires=wires))
+    def circuit():
+        layer.circuit(x)
+        return qml.probs(wires=wires)
+
+    circuit()  # Shouldn't raise any error

@@ -1,0 +1,5 @@
+num_data_samples: 50
+num_parameter_samples: 10
+gamma: 1.0
+seed: 0
+save_dir: "./results"

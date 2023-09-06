@@ -1,7 +1,12 @@
 import pytest
+from itertools import combinations
 import torch
 import pennylane as qml
-from qulearn.observable import parity_all_hamiltonian, parities_all_observables
+from qulearn.observable import (
+    parity_all_hamiltonian,
+    parities_all_observables,
+    sequence2parity_observable,
+)
 
 
 def test_parity_all_hamiltonian():
@@ -43,12 +48,23 @@ def test_parities_all_observables():
     n = 2
     observables = parities_all_observables(n)
     assert len(observables) == 4
-    assert observables[0].name[0] == "PauliZ"
+    assert observables[0].name == "PauliZ"
     assert observables[3].name == "Identity"
 
     # Test case 2
     n = 3
     observables = parities_all_observables(n)
     assert len(observables) == 8
-    assert observables[0].name[0] == "PauliZ"
+    assert observables[0].name == "PauliZ"
     assert observables[7].name == "Identity"
+
+
+def test_sequence2parity_observable():
+    # Test case 2
+    n = 3
+    observables = parities_all_observables(n)
+    pairs = list(combinations(range(n), 2))
+    observables = sequence2parity_observable(pairs)
+    assert len(observables) == 4
+    assert observables[0].name == ["PauliZ", "PauliZ"]
+    assert observables[3].name == "Identity"

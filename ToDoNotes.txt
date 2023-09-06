@@ -1,0 +1,4 @@
+- Add qkernel to qlayer, docstrings, tests
+- Add trainer just for ridge regression
+- Add new model configs, builders
+- Run capacity tests

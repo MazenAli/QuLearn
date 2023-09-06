@@ -29,7 +29,7 @@ def compute_effdim(
 
     :param model: The statistical model, which outputs a probability vector.
     :type model: Model
-    :param features: The input data (X) used to compute the FIMs.
+    :param features: The input data (X) used to compute the FIMs, shape (num_samples, num_features).
     :type features: Tensor
     :param param_list: A list of lists of parameters. Each set of parameters is used to
         compute an empirical FIM.
@@ -49,16 +49,14 @@ def compute_effdim(
         where n/log(n) < 2pi/gamma.
     """
 
-    num_samples = len(param_list)
+    num_data_samples = len(features)
     num_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
     fims = compute_fims(model, features, param_list)
     trace_integral = mc_integrate_fim_trace(fims, weights)
     norm_const = norm_const_fim(trace_integral, num_parameters, volume)
-    kappa = const_effdim(num_samples, gamma)
-    kappaT = torch.tensor(kappa, device=fims[0].device, dtype=fims[0].dtype)
-
-    effdim = mc_integrate_fims_effdim(fims, weights, norm_const, kappaT, volume)
+    kappa = const_effdim(num_data_samples, gamma)
+    effdim = mc_integrate_fims_effdim(fims, weights, norm_const, kappa, volume)
 
     return effdim
 
@@ -340,8 +338,8 @@ def empirical_fim(model: Model, features: Tensor) -> Tensor:
 
     for sample in range(num_samples):
         for state in range(num_states):
-            log_prob = log_probs[sample, state]
             model.zero_grad()
+            log_prob = log_probs[sample, state]
             log_prob.backward(retain_graph=True)
             grad_list = [
                 p.grad.view(-1)

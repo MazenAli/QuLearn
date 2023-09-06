@@ -1,0 +1,1 @@
+{"date": "05/07/2023, 08:56:06", "cdevice": "cpu", "qdevice": "default.qubit", "shots": null, "model_id": 4, "time_taken": 10529.145530462265, "m": 50, "num_data_samples": 10, "num_sigma_sample": 10, "lr": 0.1, "num_epochs": 200, "batch_size": 25, "seed": 0, "rademacher": 107.20938110351562}

@@ -1,0 +1,202 @@
+[
+    {
+        "num_features": 1,
+        "num_reuploads": 1,
+        "num_varlayers": 1,
+        "num_repeats": 1,
+        "omega": 0.0,
+        "hamiltonian_type": "Z0",
+        "double_wires": false,
+        "id": 1
+    },
+    {
+        "num_features": 1,
+        "num_reuploads": 1,
+        "num_varlayers": 1,
+        "num_repeats": 2,
+        "omega": 0.0,
+        "hamiltonian_type": "Z0",
+        "double_wires": false,
+        "id": 2
+    },
+    {
+        "num_features": 1,
+        "num_reuploads": 1,
+        "num_varlayers": 1,
+        "num_repeats": 3,
+        "omega": 0.0,
+        "hamiltonian_type": "Z0",
+        "double_wires": false,
+        "id": 3
+    },
+    {
+        "num_features": 1,
+        "num_reuploads": 2,
+        "num_varlayers": 1,
+        "num_repeats": 1,
+        "omega": 0.0,
+        "hamiltonian_type": "Z0",
+        "double_wires": false,
+        "id": 4
+    },
+    {
+        "num_features": 1,
+        "num_reuploads": 2,
+        "num_varlayers": 1,
+        "num_repeats": 2,
+        "omega": 0.0,
+        "hamiltonian_type": "Z0",
+        "double_wires": false,
+        "id": 5
+    },
+    {
+        "num_features": 1,
+        "num_reuploads": 2,
+        "num_varlayers": 1,
+        "num_repeats": 3,
+        "omega": 0.0,
+        "hamiltonian_type": "Z0",
+        "double_wires": false,
+        "id": 6
+    },
+    {
+        "num_features": 1,
+        "num_reuploads": 1,
+        "num_varlayers": 1,
+        "num_repeats": 3,
+        "omega": 1.0,
+        "hamiltonian_type": "Z0",
+        "double_wires": false,
+        "id": 7
+    },
+    {
+        "num_features": 1,
+        "num_reuploads": 2,
+        "num_varlayers": 1,
+        "num_repeats": 3,
+        "omega": 1.0,
+        "hamiltonian_type": "Z0",
+        "double_wires": false,
+        "id": 8
+    },
+    {
+        "num_features": 1,
+        "num_reuploads": 1,
+        "num_varlayers": 1,
+        "num_repeats": 1,
+        "omega": 0.0,
+        "hamiltonian_type": "Z0",
+        "double_wires": true,
+        "id": 9
+    },
+    {
+        "num_features": 1,
+        "num_reuploads": 1,
+        "num_varlayers": 1,
+        "num_repeats": 3,
+        "omega": 0.0,
+        "hamiltonian_type": "Z0",
+        "double_wires": true,
+        "id": 10
+    },
+    {
+        "num_features": 1,
+        "num_reuploads": 1,
+        "num_varlayers": 1,
+        "num_repeats": 3,
+        "omega": 1.0,
+        "hamiltonian_type": "Z0",
+        "double_wires": true,
+        "id": 11
+    },
+    {
+        "num_features": 1,
+        "num_reuploads": 1,
+        "num_varlayers": 1,
+        "num_repeats": 3,
+        "omega": 0.0,
+        "hamiltonian_type": "AllWireCombinations",
+        "double_wires": true,
+        "id": 12
+    },
+    {
+        "num_features": 1,
+        "num_reuploads": 1,
+        "num_varlayers": 1,
+        "num_repeats": 1,
+        "omega": 1.0,
+        "hamiltonian_type": "AllWireCombinations",
+        "double_wires": true,
+        "id": 13
+    },
+    {
+        "num_features": 4,
+        "num_reuploads": 1,
+        "num_varlayers": 1,
+        "num_repeats": 1,
+        "omega": 0.0,
+        "hamiltonian_type": "Z0",
+        "double_wires": false,
+        "id": 14
+    },
+    {
+        "num_features": 4,
+        "num_reuploads": 1,
+        "num_varlayers": 1,
+        "num_repeats": 1,
+        "omega": 0.0,
+        "hamiltonian_type": "AllWireCombinations",
+        "double_wires": false,
+        "id": 15
+    },
+    {
+        "num_features": 4,
+        "num_reuploads": 1,
+        "num_varlayers": 1,
+        "num_repeats": 3,
+        "omega": 1.0,
+        "hamiltonian_type": "Z0",
+        "double_wires": false,
+        "id": 16
+    },
+    {
+        "num_features": 4,
+        "num_reuploads": 1,
+        "num_varlayers": 1,
+        "num_repeats": 3,
+        "omega": 1.0,
+        "hamiltonian_type": "AllWireCombinations",
+        "double_wires": false,
+        "id": 17
+    },
+    {
+        "num_features": 4,
+        "num_reuploads": 1,
+        "num_varlayers": 1,
+        "num_repeats": 3,
+        "omega": 1.0,
+        "hamiltonian_type": "Z0",
+        "double_wires": true,
+        "id": 18
+    },
+    {
+        "num_features": 4,
+        "num_reuploads": 1,
+        "num_varlayers": 1,
+        "num_repeats": 3,
+        "omega": 1.0,
+        "hamiltonian_type": "AllWires",
+        "double_wires": false,
+        "id": 19
+    },
+    {
+        "num_features": 4,
+        "num_reuploads": 1,
+        "num_varlayers": 1,
+        "num_repeats": 3,
+        "omega": 1.0,
+        "hamiltonian_type": "AllWirePairs",
+        "double_wires": false,
+        "id": 20
+    }
+]

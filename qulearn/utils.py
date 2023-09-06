@@ -1,6 +1,6 @@
 """Frequently used functions."""
 
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 # for python < 3.10
 try:
@@ -8,6 +8,7 @@ try:
 except ImportError:
     from typing_extensions import TypeAlias
 
+from itertools import chain, combinations
 import math
 import pennylane as qml
 import torch
@@ -60,7 +61,7 @@ def samples_to_dictionary(samples: Tensor) -> Dict[str, float]:
     return bitstring_probs
 
 
-def all_bin_sequences(n: int) -> List[List[int]]:
+def all_bin_sequences(n: int) -> List[Tuple[int, ...]]:
     """
     Generates all possible binary sequences of length n.
 
@@ -71,14 +72,8 @@ def all_bin_sequences(n: int) -> List[List[int]]:
     :rtype: List[List[int]]
     """
 
-    if n == 0:
-        return [[]]
-    else:
-        sequences = []
-        for sequence in all_bin_sequences(n - 1):
-            sequences.append(sequence + [n - 1])
-            sequences.append(sequence)
-        return sequences
+    elements = list(range(n))
+    return list(chain.from_iterable(combinations(elements, r) for r in range(n + 1)))
 
 
 def parities_outcome(bitstring: str, H: Observable) -> float:

@@ -1,6 +1,7 @@
 import pytest
 import math
 import torch
+import numpy as np
 from qulearn.fim import (
     empirical_fim,
     compute_fims,
@@ -151,8 +152,24 @@ def setup_effdim():
     X = torch.tensor([[1.0], [2.0]])
     param_list = [[torch.tensor([[1.0], [1.0]])], [torch.tensor([[1.0], [1.0]])]]
     weights = torch.tensor(2.0)
-    volume = 2.0
-    gamma = 0.9
+    volume = torch.tensor(2.0)
+    gamma = torch.tensor(0.9)
+    return model, X, param_list, weights, volume, gamma
+
+
+@pytest.fixture
+def setup_effdim2():
+    dim = 3
+    model = torch.nn.Sequential(
+        torch.nn.Linear(dim, 5, bias=True), torch.nn.Softmax(dim=1)
+    )
+
+    n = 50
+    X = torch.randn((n, dim))
+    param_list = [[p.clone() for p in model.parameters() if p.requires_grad]] * 2
+    weights = torch.tensor(10.0)
+    volume = torch.tensor(10.0)
+    gamma = torch.tensor(1.0)
     return model, X, param_list, weights, volume, gamma
 
 
@@ -178,3 +195,21 @@ def test_comp_effdim(setup_effdim):
     dgamma = 2 * math.log(sqrtdet) / math.log(const)
 
     assert dgamma == pytest.approx(effdim.item(), abs=1e-4)
+
+
+def test_comp_effdim2(setup_effdim2):
+    effdim = compute_effdim(*setup_effdim2)
+    model = setup_effdim2[0]
+    num_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    X = setup_effdim2[1]
+    FIM = empirical_fim(model, X)
+    trace = torch.trace(FIM)
+    nFIM = num_parameters * FIM / trace
+    gamma = setup_effdim2[5]
+    n = len(X)
+    kappa = gamma * n / (2.0 * np.pi * np.log(n))
+    M = torch.eye(num_parameters) + nFIM * kappa
+    sqrtdet = torch.sqrt(torch.det(M))
+    expected = 2.0 * torch.log(sqrtdet) / torch.log(kappa)
+
+    assert expected.item() == pytest.approx(effdim.item(), abs=1e-4)

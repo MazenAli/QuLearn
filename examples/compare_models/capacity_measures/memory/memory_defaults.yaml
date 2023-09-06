@@ -1,0 +1,12 @@
+Nmin: 1
+Nmax: 100
+Nstep: 1
+num_samples: 20
+lr: 1e-1
+amsgrad: true
+num_epochs: 200
+batch_size: 25
+early_stop: true
+stop_count: 1
+seed: 0
+save_dir: "./results"

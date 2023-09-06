@@ -54,9 +54,9 @@ def fat_shattering_dim(
             if d == dmin:
                 logging.basicConfig(level=logging.WARNING)
                 logging.warning(f"Stopped at dmin = {dmin}.")
-                return 0
+                return dmin
 
-            return d - 1
+            return d - dstep
 
     logging.basicConfig(level=logging.WARNING)
     logging.warning(f"Reached dmax = {dmax}.")
@@ -87,8 +87,6 @@ def check_shattering(
     X = data["X"]
     b = data["b"]
     r = data["r"]
-
-    path = None
 
     for sr in range(len(r)):
         shattered = True

@@ -36,7 +36,7 @@ def test_trainer():
         logger = logging.getLogger(__name__)
         logger.setLevel(level=logging.INFO)
         num_epochs = 20
-        trainer = SupervisedTrainer(opt, loss_fn, metrics, num_epochs, writer, logger)
+        trainer = SupervisedTrainer(opt, loss_fn, num_epochs, metrics, writer, logger)
         trainer.train(model, loader, loader)
 
     # Calculate the final loss value

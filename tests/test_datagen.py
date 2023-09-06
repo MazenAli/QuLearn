@@ -2,6 +2,7 @@ import pytest
 import torch
 import math
 import numpy as np
+import torch
 from torch.utils.data import DataLoader
 from qulearn.datagen import (
     DataGenCapacity,
@@ -9,6 +10,8 @@ from qulearn.datagen import (
     DataGenRademacher,
     UniformPrior,
     NormalPrior,
+    generate_lhs_samples,
+    generate_model_lhs_samples,
 )
 
 
@@ -229,3 +232,36 @@ def test_gen_data_data_gen_rademacher(setup_datagen_rademacher):
 
     # Test values of sigmas
     assert torch.all((sigmas == 1) | (sigmas == -1))
+
+
+def test_generate_lhs_samples():
+    n_samples = 10
+    n_dims = 2
+    lower_bound = -1.0
+    upper_bound = 1.0
+    samples = generate_lhs_samples(n_samples, n_dims, lower_bound, upper_bound, seed=0)
+    assert isinstance(samples, np.ndarray)
+    assert samples.shape == (n_samples, n_dims)
+    assert (samples >= lower_bound).all()
+    assert (samples <= upper_bound).all()
+
+
+def test_generate_model_lhs_samples():
+    model = torch.nn.Linear(3, 1)
+    n_samples = 10
+    lower_bound = -1.0
+    upper_bound = 1.0
+    parameter_samples = generate_model_lhs_samples(
+        model, n_samples, lower_bound, upper_bound, seed=0
+    )
+    assert isinstance(parameter_samples, list)
+    assert len(parameter_samples) == n_samples
+    for sample in parameter_samples:
+        assert isinstance(sample, list)
+        assert len(sample) == len(
+            list(filter(lambda p: p.requires_grad, model.parameters()))
+        )
+        for param in sample:
+            assert isinstance(param, torch.Tensor)
+            assert (param.detach().numpy() >= lower_bound).all()
+            assert (param.detach().numpy() <= upper_bound).all()

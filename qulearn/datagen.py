@@ -1,4 +1,4 @@
-from typing import Optional, TypeVar, Generic, Tuple, Dict, Set
+from typing import Optional, TypeVar, Generic, Tuple, Dict, Set, List
 
 # for python < 3.10
 try:
@@ -8,6 +8,7 @@ except ImportError:
 
 from abc import ABC, abstractmethod
 import torch
+from torch.nn import Module
 from torch.utils.data import TensorDataset, DataLoader
 import numpy as np
 from itertools import product
@@ -18,6 +19,10 @@ Array: TypeAlias = np.ndarray
 Device: TypeAlias = torch.device
 DataOut: TypeAlias = Dict[str, Tensor]
 Loader: TypeAlias = DataLoader
+Model: TypeAlias = Module
+ParameterList: TypeAlias = List[List[Tensor]]
+CDevice: TypeAlias = torch.device
+DType: TypeAlias = torch.dtype
 D = TypeVar("D")
 L = TypeVar("L")
 
@@ -761,7 +766,7 @@ def gen_synthetic_labels_fat(
     :type gamma: float, optional
     :param device: Torch device to run on. Defaults to CPU.
     :type device: Device, optional
-    :return: Y of shape (Sr, Sb, d).
+    :return: Y of shape (Sr, Sb, d, 1).
     :rtype: Tensor
     :raises ValueError: If the length of b[0] is not the same as the length of r[0].
     """
@@ -821,3 +826,85 @@ def gen_sigmas(
     )
 
     return sigmas
+
+
+def generate_lhs_samples(
+    n_samples: int,
+    n_dims: int,
+    lower_bound: float,
+    upper_bound: float,
+    seed: Optional[int] = None,
+) -> Array:
+    """
+    Generate Latin Hypercube Samples (LHS) within the specified range.
+
+    :param n_samples: The number of samples to generate.
+    :type n_samples: int
+    :param n_dims: The number of dimensions for each sample.
+    :type n_dims: int
+    :param lower_bound: The lower bound for the samples.
+    :type lower_bound: float
+    :param upper_bound: The upper bound for the samples.
+    :type upper_bound: float
+    :param seed: The random seed. Defaults to None.
+    :type seed: int, optional
+    :return: A numpy array containing the generated samples.
+    :rtype: Array
+    """
+
+    sampler = qmc.LatinHypercube(d=n_dims, seed=seed)
+    sample = sampler.random(n=n_samples)
+    return lower_bound + sample * (upper_bound - lower_bound)
+
+
+def generate_model_lhs_samples(
+    model: Model,
+    n_samples: int,
+    lower_bound: float,
+    upper_bound: float,
+    device: Optional[CDevice] = None,
+    dtype: Optional[DType] = None,
+    seed: Optional[int] = None,
+) -> ParameterList:
+    """
+    Generate Latin Hypercube Samples (LHS) for each parameter of a given model.
+
+    :param model: The model whose parameters to sample.
+    :type model: Model
+    :param n_samples: The number of samples to generate.
+    :type n_samples: int
+    :param lower_bound: The lower bound for the samples.
+    :type lower_bound: float
+    :param upper_bound: The upper bound for the samples.
+    :type upper_bound: float
+    :param cdevice: Classical device to store the parameters, defaults to None.
+    :type cdevice: CDevice, optional
+    :param dtype: Data type of the parameters, defaults to None.
+    :type dtype: DType, optional
+    :param seed: The random seed. Defaults to None.
+    :type seed: int, optional
+    :return: A list of lists containing samples for each parameter.
+    :rtype: ParameterList
+    """
+
+    model_parameters = list(filter(lambda p: p.requires_grad, model.parameters()))
+    samples = []
+    for p in model_parameters:
+        n_dims = p.numel()
+        sample_parameter = generate_lhs_samples(
+            n_samples=n_samples,
+            n_dims=n_dims,
+            lower_bound=lower_bound,
+            upper_bound=upper_bound,
+            seed=seed,
+        )
+        samples.append(sample_parameter.reshape((n_samples,) + p.shape))
+    parameter_list = [
+        [
+            torch.tensor(samples[j][i], device=device, dtype=dtype)
+            for j in range(len(samples))
+        ]
+        for i in range(n_samples)
+    ]
+
+    return parameter_list

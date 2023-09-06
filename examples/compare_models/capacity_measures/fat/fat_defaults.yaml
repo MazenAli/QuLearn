@@ -1,0 +1,12 @@
+dmin: 1
+dmax: 100
+dstep: 1
+gamma: 1.0
+Sb: 10
+Sr: 5
+lr: 0.1
+amsgrad: true
+num_epochs: 200
+batch_size: 25
+seed: 0
+save_dir: "./results"

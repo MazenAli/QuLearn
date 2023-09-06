@@ -45,10 +45,11 @@ class SupervisedTrainer:
     :type optimizer: Optimizer
     :param loss_fn: The loss function used for optimization.
     :type loss_fn: Loss
-    :param metrics: A dictionary mapping metric names to the metric functions to be evaluated.
-    :type metrics: Dict[str, Metric]
     :param num_epochs: The number of epochs to train for.
     :type num_epochs: int
+    :param metrics: A dictionary mapping metric names to the metric functions to be evaluated.
+        Defaults to empty dict.
+    :type metrics: Dict[str, Metric], optional
     :param writer: An optional writer for logging purposes. Default is None.
     :type writer: Optional[Writer]
     :param logger: An optional logger for logging purposes. Default is None.
@@ -59,8 +60,8 @@ class SupervisedTrainer:
         self,
         optimizer: Optimizer,
         loss_fn: Loss,
-        metrics: Dict[str, Metric],
         num_epochs: int,
+        metrics: Dict[str, Metric] = {},
         writer: Optional[Writer] = None,
         logger: Optional[Logger] = None,
     ) -> None:
@@ -162,9 +163,9 @@ class SupervisedTrainer:
 
         if self.logger is not None:
             metrics_strs = [
-                f"{metric_name}: {metric_value:.4f}"
+                f"{metric_name}: {metric_value:.6f}"
                 for metric_name, metric_value in metrics.items()
             ]
             self.logger.info(
-                f"{phase} - Epoch: {epoch}, Loss: {loss:.4f}, Metrics: {', '.join(metrics_strs)}"
+                f"{phase} - Epoch: {epoch}, Loss: {loss:.6f}, Metrics: {', '.join(metrics_strs)}"
             )

@@ -10,10 +10,12 @@ from enum import Enum
 
 import logging
 import torch
+from torch import nn
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
 import pennylane as qml
 
+from .qkernel import QKernel
 
 Optimizer: TypeAlias = torch.optim.Optimizer
 Loss: TypeAlias = torch.nn.Module
@@ -23,6 +25,7 @@ Logger: TypeAlias = logging.Logger
 Model: TypeAlias = qml.QNode
 Loader: TypeAlias = DataLoader
 Tensor: TypeAlias = torch.Tensor
+Parameter: TypeAlias = nn.Parameter
 
 
 class EpochType(Enum):
@@ -169,3 +172,64 @@ class SupervisedTrainer:
             self.logger.info(
                 f"{phase} - Epoch: {epoch}, Loss: {loss:.6f}, Metrics: {', '.join(metrics_strs)}"
             )
+
+
+class RidgeRegression:
+    def __init__(
+        self,
+        lambda_reg: float,
+        metrics: Dict[str, Metric] = {},
+        logger: Optional[Logger] = None,
+    ) -> None:
+        self.lambda_reg = lambda_reg
+        self.metrics = metrics
+        self.logger = logger
+
+    def train(self, model: QKernel, train_data: Loader, valid_data: Loader) -> None:
+        if len(train_data) != 1:
+            raise ValueError("For ridge regression batching training data is invalid")
+        if len(valid_data) != 1:
+            raise ValueError("For ridge regression batching validation data is invalid")
+
+        for inputs, labels in train_data:
+            alpha = self.kernel_ridge_regression(model, inputs, labels)
+            model.alpha = alpha
+
+        phase = EpochType.Train.name
+        running_metrics = {}
+        for inputs, labels in train_data:
+            predicted = model(inputs)
+            for metric in self.metrics:
+                running_metrics[metric] = self.metrics[metric](predicted, labels)
+        self._log_metrics(phase, running_metrics)
+
+        phase = EpochType.Validate.name
+        running_metrics = {}
+        for inputs, labels in valid_data:
+            predicted = model(inputs)
+            for metric in self.metrics:
+                running_metrics[metric] = self.metrics[metric](predicted, labels)
+        self._log_metrics(phase, running_metrics)
+
+    def kernel_ridge_regression(
+        self, model: QKernel, inputs: Tensor, labels: Tensor
+    ) -> Parameter:
+        linputs = len(inputs.shape)
+        if linputs != 2:
+            raise ValueError(f"Inputs must have 2 dimensions each, not {linputs}")
+
+        K = model.kernel_matrix(inputs, inputs)
+        num_samples = inputs.shape[0]
+        I = torch.eye(num_samples, dtype=labels.dtype, device=labels.device)
+        M = K + self.lambda_reg * I
+        alpha = nn.Parameter(torch.linalg.solve(M, labels))
+
+        return alpha
+
+    def _log_metrics(self, phase: str, metrics: Dict[str, float]) -> None:
+        if self.logger is not None:
+            metrics_strs = [
+                f"{metric_name}: {metric_value:.6f}"
+                for metric_name, metric_value in metrics.items()
+            ]
+            self.logger.info(f"{phase} - Metrics: {', '.join(metrics_strs)}")

@@ -175,6 +175,18 @@ class SupervisedTrainer:
 
 
 class RidgeRegression:
+    """
+    Class to handle the training of a model using Ridge Regression.
+
+    :param lambda_reg: Regularization strength. Must be positive.
+    :type lambda_reg: float
+    :param metrics: A dictionary mapping metric names to the metric functions to be evaluated.
+        Defaults to empty dict.
+    :type metrics: Dict[str, Metric], optional
+    :param logger: An optional logger for logging purposes. Default is None.
+    :type logger: Optional[Logger]
+    """
+
     def __init__(
         self,
         lambda_reg: float,
@@ -186,12 +198,26 @@ class RidgeRegression:
         self.logger = logger
 
     def train(self, model: QKernel, train_data: Loader, valid_data: Loader) -> None:
+        """
+        Train the given model using the provided data loaders using Ridge Regression.
+
+        :param model: The quantum kernel model to be trained.
+        :type model: QKernel
+        :param train_data: The DataLoader for the training data.
+        :type train_data: Loader
+        :param valid_data: The DataLoader for the validation data.
+        :type valid_data: Loader
+
+        .. warning::
+            Training changes the state of the model by assigning `X_train`.
+        """
         if len(train_data) != 1:
             raise ValueError("For ridge regression batching training data is invalid")
         if len(valid_data) != 1:
             raise ValueError("For ridge regression batching validation data is invalid")
 
         for inputs, labels in train_data:
+            model.X_train = inputs
             alpha = self.kernel_ridge_regression(model, inputs, labels)
             model.alpha = alpha
 
@@ -214,6 +240,18 @@ class RidgeRegression:
     def kernel_ridge_regression(
         self, model: QKernel, inputs: Tensor, labels: Tensor
     ) -> Parameter:
+        """
+        Compute Ridge Regression solution for the given inputs and labels using the provided model.
+
+        :param model: The quantum kernel model.
+        :type model: QKernel
+        :param inputs: Input data tensor.
+        :type inputs: Tensor
+        :param labels: Corresponding labels tensor.
+        :type labels: Tensor
+        :return: The computed alpha parameter tensor.
+        :rtype: Parameter
+        """
         linputs = len(inputs.shape)
         if linputs != 2:
             raise ValueError(f"Inputs must have 2 dimensions each, not {linputs}")
@@ -227,6 +265,14 @@ class RidgeRegression:
         return alpha
 
     def _log_metrics(self, phase: str, metrics: Dict[str, float]) -> None:
+        """
+        Log computed metrics for the provided phase.
+
+        :param phase: The phase (train or validate) being logged.
+        :type phase: str
+        :param metrics: Dictionary of computed metrics.
+        :type metrics: Dict[str, float]
+        """
         if self.logger is not None:
             metrics_strs = [
                 f"{metric_name}: {metric_value:.6f}"

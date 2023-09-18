@@ -43,7 +43,7 @@ class QKernel(nn.Module):
     ) -> None:
         super().__init__()
         self.embed = embed
-        self.X_train = X_train
+        self._X_train = X_train
         self.num_samples = X_train.shape[0]
         self.alpha = nn.Parameter(
             torch.empty(
@@ -62,6 +62,23 @@ class QKernel(nn.Module):
         self.interface = kwargs.pop("interface", "torch")
         self.diff_method = kwargs.pop("diff_method", "backprop")
         self.qnode = self.set_qnode()
+
+    @property
+    def X_train(self) -> Tensor:
+        return self._X_train
+
+    @X_train.setter
+    def X_train(self, X: Tensor) -> None:
+        self._X_train = X
+        self.num_samples = X.shape[0]
+        self.alpha = nn.Parameter(
+            torch.empty(
+                self.num_samples,
+                device=self.X_train.device,
+                dtype=self.X_train.dtype,
+            )
+        )
+        nn.init.normal_(self.alpha)
 
     def kernel_circuit(self, x: Tensor, x_: Tensor) -> Expectation:
         """

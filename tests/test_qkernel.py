@@ -42,3 +42,21 @@ def test_qkernel_forward():
 
     assert isinstance(result, torch.Tensor)
     assert result.shape == (1,)
+
+
+def test_QKernel_X_train_getter_and_setter():
+    embed = HadamardLayer(wires=2)  # You would need to define or mock this
+    X_train_initial = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+    qkernel = QKernel(embed, X_train_initial)
+
+    # Check the getter
+    assert torch.equal(qkernel.X_train, X_train_initial)
+
+    # Check the setter
+    new_X_train = torch.tensor([[5.0, 6.0], [7.0, 8.0]])
+    qkernel.X_train = new_X_train
+    assert torch.equal(qkernel.X_train, new_X_train)
+
+    # Verify that other attributes like num_samples and alpha were updated
+    assert qkernel.num_samples == 2
+    assert qkernel.alpha.shape[0] == 2

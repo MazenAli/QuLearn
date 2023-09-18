@@ -3,13 +3,16 @@ from model_builder import QNNModel, ModelBuilder, QNNStatModel
 
 def test_qnnmodel_creation():
     config = {
+        "init_varlayer": True,
+        "init_varlayer_nlayers": 1,
+        "upload_type": "Sequential",
         "num_features": 4,
+        "num_repeat_parallel": 1,
         "num_reuploads": 2,
         "num_varlayers": 2,
         "num_repeats": 3,
         "omega": 0.7,
         "hamiltonian_type": "AllWires",
-        "double_wires": True,
         "id": 1,
     }
     model = QNNModel(**config)

@@ -58,17 +58,44 @@ def parse_args():
     )
 
     parser.add_argument(
+        "--init_varlayer",
+        action="store_true",
+        help="Flag for initial variational layer.",
+    )
+    parser.add_argument(
+        "--qkernel",
+        action="store_true",
+        help="Flag for a quantum kernel model.",
+    )
+    parser.add_argument(
+        "--init_varlayer_nlayers",
+        type=int,
+        default=1,
+        help="Number of initial variational layers.",
+    )
+    parser.add_argument(
+        "--upload_type",
+        type=str,
+        required=True,
+        choices=["Sequential", "Parallel", "ParallelEntangled"],
+        help="Type of data upload.",
+    )
+    parser.add_argument(
         "--num_features", type=int, required=True, help="Number of features."
+    )
+    parser.add_argument(
+        "--num_repeat_parallel",
+        type=int,
+        required=True,
+        help="Number of times to repeat parallel encoding.",
     )
     parser.add_argument(
         "--num_reuploads", type=int, required=True, help="Number of reuploads."
     )
     parser.add_argument(
-        "--num_varlayers", type=int, required=True, help="Number of variational layers."
+        "--num_varlayers", type=int, default=1, help="Number of variational layers."
     )
-    parser.add_argument(
-        "--num_repeats", type=int, required=True, help="Number of repeats."
-    )
+    parser.add_argument("--num_repeats", type=int, default=1, help="Number of repeats.")
     parser.add_argument("--omega", type=float, required=True, help="Omega parameter.")
     parser.add_argument(
         "--hamiltonian_type",
@@ -76,9 +103,6 @@ def parse_args():
         required=True,
         choices=["Z0", "AllWires", "AllWirePairs", "AllWireCombinations"],
         help="Type of Hamiltonian.",
-    )
-    parser.add_argument(
-        "--double_wires", action="store_true", help="Flag for doubling the wires."
     )
 
     return parser.parse_args()

@@ -13,7 +13,7 @@ import logging
 import torch
 from torch.optim import Adam
 from qulearn.datagen import DataGenCapacity
-from qulearn.trainer import SupervisedTrainer
+from qulearn.trainer import SupervisedTrainer, RidgeRegression
 from qulearn.memory import memory
 from model_builder import ModelBuilder, CDEV, QDEV
 
@@ -61,6 +61,12 @@ def parse_args():
         help="Learning rate",
     )
     parser.add_argument(
+        "--lambda_reg",
+        type=float,
+        default=config["lambda_reg"],
+        help="Regularization parameter ridge regression",
+    )
+    parser.add_argument(
         "--amsgrad",
         action="store_true",
         default=amsgrad,
@@ -102,6 +108,13 @@ def parse_args():
         default=config["save_dir"],
         help="Directory for saving results",
     )
+    parser.add_argument(
+        "--models",
+        type=int,
+        nargs="+",
+        default=config.get("models", []),
+        help="List of model IDs",
+    )
     args = parser.parse_args()
     return args
 
@@ -115,18 +128,31 @@ def main(args):
     configs = model_builder.data
     for config in configs:
         model_id = config["id"]
+        qkernel = config["qkernel"]
+        logger = logging.getLogger("memory")
+        logger.setLevel(level=logging.INFO)
+
+        if model_id not in args.models:
+            logger.info(f"*** Model ID {model_id} not in list, skipping... ***")
+            continue
+
         model = model_builder.create_model(model_id)
         optimizer = Adam(model.parameters(), lr=args.lr, amsgrad=args.amsgrad)
         loss_fn = torch.nn.MSELoss()
-        logger = logging.getLogger("memory")
-        logger.setLevel(level=logging.INFO)
+        metrics = {"mse_loss": loss_fn}
         logger.info(f"=============== Model ID: {model_id} | START ===============")
-        trainer = SupervisedTrainer(
-            optimizer=optimizer,
-            loss_fn=loss_fn,
-            num_epochs=args.num_epochs,
-            logger=logger,
-        )
+
+        if qkernel:
+            trainer = RidgeRegression(
+                lambda_reg=args.lambda_reg, metrics=metrics, logger=logger
+            )
+        else:
+            trainer = SupervisedTrainer(
+                optimizer=optimizer,
+                loss_fn=loss_fn,
+                num_epochs=args.num_epochs,
+                logger=logger,
+            )
 
         sizex = model.num_features
         datagen = DataGenCapacity(

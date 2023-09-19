@@ -24,6 +24,7 @@ Expectation: TypeAlias = qml.measurements.ExpectationMP
 Observable: TypeAlias = qml.operation.Observable
 Probability: TypeAlias = qml.measurements.ProbabilityMP
 Sample: TypeAlias = qml.measurements.SampleMP
+Entropy: TypeAlias = qml.measurements.VnEntropyMP
 
 
 class MeasurementType(Enum):
@@ -35,6 +36,8 @@ class MeasurementType(Enum):
     Probabilities = "probabilities"
     """Samples: return measurement samples."""
     Samples = "samples"
+    """Entropy: calculate the von Neumann entropy of a subsystem."""
+    Entropy = "entropy"
 
 
 class CircuitLayer(nn.Module):
@@ -612,6 +615,8 @@ class MeasurementLayer(nn.Module):
         self.check_measurement_type()
         self.qnode = self.set_qnode()
 
+        self.subwires = [0]
+
     def forward(self, x: Optional[Tensor] = None) -> Tensor:
         """
         Forward pass, depending on measurement type.
@@ -684,6 +689,20 @@ class MeasurementLayer(nn.Module):
         sample = qml.sample(wires=self.wires)
         return sample
 
+    def entropy(self, x: Optional[Tensor] = None) -> Entropy:
+        """
+        Calculate the Von Neumann Entropy of a subsystem.
+
+        :param x: Input tensor that is passed to the quantum circuits, defaults to None.
+        :type x: Optional[Tensor]
+        :return: Entropy value object for a subsystem.
+        :rtype: Entropy
+        """
+        for circuit in self.circuits:
+            circuit(x)
+        entropy = qml.vn_entropy(self.subwires)
+        return entropy
+
     def set_qnode(self) -> QNode:
         """
         Set the quantum node for the layer and measurement type.
@@ -698,6 +717,8 @@ class MeasurementLayer(nn.Module):
             circuit = self.probabilities
         elif self.measurement_type == MeasurementType.Samples:
             circuit = self.samples
+        elif self.measurement_type == MeasurementType.Entropy:
+            circuit = self.entropy
 
         qnode = qml.QNode(
             circuit,

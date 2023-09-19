@@ -94,6 +94,12 @@ def test_measurement_layer_samples(mock_measurement_layer):
     assert layer.samples(x) is not None
 
 
+def test_measurement_layer_entropy(mock_measurement_layer):
+    layer = mock_measurement_layer
+    x = torch.tensor([0.1, 0.2])
+    assert layer.entropy(x) is not None
+
+
 def test_measurement_layer_set_qnode(mock_measurement_layer):
     layer = mock_measurement_layer
     qnode = layer.set_qnode()

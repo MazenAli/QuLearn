@@ -211,9 +211,8 @@ class QNNModel(nn.Module):
         return y
 
 
-class QKernelModel(nn.Module):
+class QKernelModel(QKernel):
     def __init__(self, **config) -> None:
-        super().__init__()
         self.upload_type = type_conversion_upload[config["upload_type"]]
         self.num_features = config["num_features"]
         self.num_repeat_parallel = config["num_repeat_parallel"]
@@ -247,17 +246,13 @@ class QKernelModel(nn.Module):
         X_train = torch.randn(
             (num_samples, self.num_features), device=CDEV, dtype=DTYPE
         )
-        self.qnn = QKernel(
+        super().__init__(
             embed,
             X_train,
             qdevice,
             interface=INTERFACE,
             diff_method=DIFFM,
         )
-
-    def forward(self, x: Tensor) -> Tensor:
-        y = self.qnn(x)
-        return y
 
 
 class QNNStatModel(nn.Module):
@@ -387,8 +382,8 @@ class ModelBuilder:
         config = self.get_model_config(model_id)
         # remove 'id' from config as create_model might not expect it
         if self.statistical:
-            return QNNStatModel(**config).qnn
+            return QNNStatModel(**config)
         elif config["qkernel"]:
-            return QKernelModel(**config).qnn
+            return QKernelModel(**config)
         else:
-            return QNNModel(**config).qnn
+            return QNNModel(**config)

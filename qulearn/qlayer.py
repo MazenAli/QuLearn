@@ -106,7 +106,8 @@ class IQPEmbeddingLayer(CircuitLayer):
         :param x: Input tensor that is passed to the quantum circuit.
         :type x: Tensor
         """
-        self.qfunc(x, self.wires, self.n_repeat, **self.kwargs)
+        for _ in range(self.n_repeat):
+            self.qfunc(x, wires=self.wires, **self.kwargs)
 
 
 class RYCZLayer(CircuitLayer):

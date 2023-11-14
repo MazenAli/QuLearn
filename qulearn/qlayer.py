@@ -261,6 +261,90 @@ class AltRotCXLayer(CircuitLayer):
                 )
 
 
+class AltRXCXLayer(CircuitLayer):
+    """
+    Layer for alternating CNOT gates with RX rotations.
+
+    :param wires: The wires to be used by the layer.
+    :type wires: Wires
+    :param n_layers: The number of layers for the simplified two-design architecture,
+        defaults to 1.
+    :type n_layers: int, optional
+    :param cdevice: Classical device to store the initial layer weights
+        and internal layer weights, defaults to None.
+    :type cdevice: CDevice, optional
+    :param dtype: Data type of the weights, defaults to None.
+    :type dtype: DType, optional
+    :param kwargs: Extra arguments passed to the SimplifiedTwoDesign.
+    """
+
+    def __init__(
+        self,
+        wires: Wires,
+        n_layers: int = 1,
+        cdevice: Optional[CDevice] = None,
+        dtype: Optional[DType] = None,
+        **kwargs,
+    ) -> None:
+        super().__init__(wires)
+
+        self.n_layers = n_layers
+        self.cdevice = cdevice
+        self.dtype = dtype
+        self.kwargs = kwargs
+
+        # weight parameters
+        self.initial_layer_weights = torch.nn.Parameter(
+            torch.empty((self.num_wires), device=self.cdevice, dtype=self.dtype)
+        )
+        self.weights = torch.nn.Parameter(
+            torch.empty(
+                (self.n_layers, 2 * (self.num_wires - 1)),
+                device=self.cdevice,
+                dtype=self.dtype,
+            )
+        )
+        nn.init.uniform_(self.initial_layer_weights, a=0.0, b=2 * math.pi)
+        nn.init.uniform_(self.weights, a=0.0, b=2 * math.pi)
+
+    def circuit(self, _: Optional[Tensor] = None) -> None:
+        """
+        Define the quantum circuit for this layer.
+
+        :param _: Input tensor that is passed to the quantum circuit (ignored).
+        :type _: Optional[Tensor]
+        """
+        for index, q in enumerate(self.wires):
+            qml.RX(
+                self.initial_layer_weights[index],
+                q,
+            )
+
+        for layer in range(self.n_layers):
+            for i in range(0, len(self.wires) - 1, 2):
+                qml.CNOT(wires=[self.wires[i], self.wires[i + 1]])
+                qml.RX(
+                    self.weights[layer, i],
+                    self.wires[i],
+                )
+                qml.RX(
+                    self.weights[layer, i + 1],
+                    self.wires[i + 1],
+                )
+
+            offset = int(self.num_wires / 2) * 2
+            for i in range(1, len(self.wires) - 1, 2):
+                qml.CNOT(wires=[self.wires[i], self.wires[i + 1]])
+                qml.RX(
+                    self.weights[layer, offset + i - 1],
+                    self.wires[i],
+                )
+                qml.RX(
+                    self.weights[layer, offset + i],
+                    self.wires[i + 1],
+                )
+
+
 class IQPERYCZLayer(CircuitLayer):
     """
     Layer combining an IQP embedding layer and an RY-CZ variational layer.

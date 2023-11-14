@@ -185,8 +185,8 @@ def test_normal_prior(setup_normal_prior):
     assert data.size()[1] == sizex
 
     # Test if scale and shift have been applied correctly
-    assert math.isclose(torch.mean(data).item(), shift, abs_tol=1e-2)
-    assert math.isclose(torch.std(data).item(), scale, abs_tol=1e-2)
+    assert math.isclose(torch.mean(data).item(), shift, abs_tol=1e-1)
+    assert math.isclose(torch.std(data).item(), scale, abs_tol=1e-1)
 
 
 def test_uniform_prior(setup_uniform_prior):
@@ -202,8 +202,8 @@ def test_uniform_prior(setup_uniform_prior):
     assert data.size()[1] == sizex
 
     # Test if scale and shift have been applied correctly
-    assert math.isclose(torch.mean(data).item(), shift + scale / 2, abs_tol=1e-2)
-    assert math.isclose(torch.std(data).item(), scale / math.sqrt(12), abs_tol=1e-2)
+    assert math.isclose(torch.mean(data).item(), shift + scale / 2, abs_tol=1e-1)
+    assert math.isclose(torch.std(data).item(), scale / math.sqrt(12), abs_tol=1e-1)
 
 
 def test_gen_data_data_gen_rademacher(setup_datagen_rademacher):

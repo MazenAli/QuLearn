@@ -357,8 +357,11 @@ class IQPERYCZLayer(CircuitLayer):
     :type num_varlayers: int, optional
     :param num_repeat: The number of times to repeat the combined layers, defaults to 1.
     :type num_repeat: int, optional
-    :param omega: The exponent for the base of the power by which the inputs is scaled
-        on each repetition number is raised, defaults to 0.0
+    :param base: The base of the exponent by which the inputs are scaled
+        on each repetition, defaults to 1.0
+    :type base: float, optional
+    :param omega: The exponent for the base of the power by which the inputs are scaled
+        on each repetition, defaults to 0.0
     :type omega: float, optional
     :param cdevice: Classical device to store the observable weights.
         If None specified, the default device is used.
@@ -377,6 +380,7 @@ class IQPERYCZLayer(CircuitLayer):
         num_uploads: int = 1,
         num_varlayers: int = 1,
         num_repeat: int = 1,
+        base: Tensor = torch.tensor(1.0),
         omega: Tensor = torch.tensor(0.0),
         cdevice: Optional[CDevice] = None,
         dtype: Optional[DType] = None,
@@ -387,6 +391,7 @@ class IQPERYCZLayer(CircuitLayer):
         self.num_uploads = num_uploads
         self.num_varlayers = num_varlayers
         self.num_repeat = num_repeat
+        self.base = base
         self.omega = omega
         self.cdevice = cdevice
         self.dtype = dtype
@@ -426,7 +431,7 @@ class IQPERYCZLayer(CircuitLayer):
         :type x: Tensor
         """
         for i, block in enumerate(self.blocks):
-            fac = 2 ** (self.omega * i)
+            fac = self.base ** (self.omega * i)
             block(fac * x)
 
 
@@ -442,8 +447,11 @@ class IQPEAltRotCXLayer(CircuitLayer):
     :type num_varlayers: int, optional
     :param num_repeat: The number of times to repeat the combined layers, defaults to 1.
     :type num_repeat: int, optional
-    :param omega: The exponent for the base of the power by which the inputs is scaled
-        on each repetition number is raised, defaults to 0.0
+    :param base: The base of the exponent by which the inputs are scaled
+        on each repetition, defaults to 1.0
+    :type base: float, optional
+    :param omega: The exponent for the base of the power by which the inputs are scaled
+        on each repetition, defaults to 0.0
     :type omega: float, optional
     :param cdevice: Classical device to store the observable weights.
         If None specified, the default device is used.
@@ -462,6 +470,7 @@ class IQPEAltRotCXLayer(CircuitLayer):
         num_uploads: int = 1,
         num_varlayers: int = 1,
         num_repeat: int = 1,
+        base: Tensor = torch.tensor(1.0),
         omega: Tensor = torch.tensor(0.0),
         cdevice: Optional[CDevice] = None,
         dtype: Optional[DType] = None,
@@ -472,6 +481,7 @@ class IQPEAltRotCXLayer(CircuitLayer):
         self.num_uploads = num_uploads
         self.num_varlayers = num_varlayers
         self.num_repeat = num_repeat
+        self.base = base
         self.omega = omega
         self.cdevice = cdevice
         self.dtype = dtype
@@ -502,7 +512,7 @@ class IQPEAltRotCXLayer(CircuitLayer):
         :type x: Tensor
         """
         for i, block in enumerate(self.blocks):
-            fac = 2 ** (self.omega * i)
+            fac = self.base ** (self.omega * i)
             block(fac * x)
 
 
@@ -539,8 +549,12 @@ class ParallelIQPEncoding(CircuitLayer):
     :type num_features: int
     :param n_repeat: The number of times the IQPEmbedding will be repeated, defaults to 1
     :type n_repeat: int, optional
-    :param omega: A scalar value used in constructing feature vector, defaults to torch.tensor(0.0)
-    :type omega: Tensor, optional
+    :param base: The base of the exponent by which the inputs are scaled
+        on each repetition, defaults to 1.0
+    :type base: float, optional
+    :param omega: The exponent for the base of the power by which the inputs are scaled
+        on each repetition, defaults to 0.0
+    :type omega: float, optional
 
     :raises ValueError: If the number of wires is less than the number of features
     :raises ValueError: If the number of wires is not a multiple of the number of features
@@ -551,12 +565,14 @@ class ParallelIQPEncoding(CircuitLayer):
         wires: Wires,
         num_features: int,
         n_repeat: int = 1,
+        base: Tensor = torch.tensor(1.0),
         omega: Tensor = torch.tensor(0.0),
         **kwargs,
     ) -> None:
         super().__init__(wires)
         self.num_features = num_features
         self.n_repeat = n_repeat
+        self.base = base
         self.omega = omega
         self.kwargs = kwargs
         self.qfunc = qml.IQPEmbedding
@@ -585,7 +601,7 @@ class ParallelIQPEncoding(CircuitLayer):
 
         freq = 0
         for i in range(0, len(self.wires), num_features):
-            x_ = 2 ** (freq * self.omega) * x
+            x_ = self.base ** (freq * self.omega) * x
             self.qfunc(
                 x_, self.wires[i : i + num_features], self.n_repeat, **self.kwargs
             )
@@ -602,8 +618,12 @@ class ParallelEntangledIQPEncoding(CircuitLayer):
     :type num_features: int
     :param n_repeat: The number of times the IQPEmbedding will be repeated, defaults to 1
     :type n_repeat: int, optional
-    :param omega: A scalar value used in constructing feature vector, defaults to torch.tensor(0.0)
-    :type omega: Tensor, optional
+    :param base: The base of the exponent by which the inputs are scaled
+        on each repetition, defaults to 1.0
+    :type base: float, optional
+    :param omega: The exponent for the base of the power by which the inputs are scaled
+        on each repetition, defaults to 0.0
+    :type omega: float, optional
 
     :raises ValueError: If the number of wires is less than the number of features
     :raises ValueError: If the number of wires is not a multiple of the number of features
@@ -614,12 +634,14 @@ class ParallelEntangledIQPEncoding(CircuitLayer):
         wires: Wires,
         num_features: int,
         n_repeat: int = 1,
+        base: Tensor = torch.tensor(1.0),
         omega: Tensor = torch.tensor(0.0),
         **kwargs,
     ) -> None:
         super().__init__(wires)
         self.num_features = num_features
         self.n_repeat = n_repeat
+        self.base = base
         self.omega = omega
         self.kwargs = kwargs
         self.qfunc = qml.IQPEmbedding
@@ -650,7 +672,7 @@ class ParallelEntangledIQPEncoding(CircuitLayer):
 
         x_large = []
         for j in range(0, num_repeats):
-            x_ = 2 ** (j * self.omega) * x
+            x_ = self.base ** (j * self.omega) * x
             x_large.append(x_)
 
         x_final = torch.cat(x_large)

@@ -58,7 +58,7 @@ def mock_measurement_layer():
     wires = 2
     circuit1 = CircuitLayer(wires)
     circuit2 = CircuitLayer(wires)
-    yield MeasurementLayer(circuit1, circuit2, observable=qml.PauliZ(0))
+    yield MeasurementLayer(circuit1, circuit2, observables=qml.PauliZ(0))
 
 
 def test_measurement_layer_init(mock_measurement_layer):
@@ -66,7 +66,7 @@ def test_measurement_layer_init(mock_measurement_layer):
     assert len(layer.circuits) == 2
     assert layer.qdevice is not None
     assert layer.measurement_type == MeasurementType.Probabilities
-    assert layer.observable is not None
+    assert layer.observables is not None
     assert layer.interface == "torch"
 
 
@@ -349,3 +349,49 @@ def test_parallel_entangled_iqp_encoding():
         return qml.probs(wires=wires)
 
     circuit()  # Shouldn't raise any error
+
+
+def test_forward_1d_tensor_single_observable():
+    circuit = IQPEmbeddingLayer(wires=1)
+    model = MeasurementLayer(
+        circuit, observables=qml.PauliZ(0), measurement_type=MeasurementType.Expectation
+    )
+    x = torch.tensor([0.1])
+    output = model(x)
+    assert output.shape == torch.Size([1])
+
+
+def test_forward_1d_tensor_multiple_observables():
+    circuit = IQPEmbeddingLayer(wires=3)
+    model = MeasurementLayer(
+        circuit,
+        observables=[qml.PauliZ(i) for i in range(3)],
+        measurement_type=MeasurementType.Expectation,
+    )
+    x = torch.tensor([0.1, 0.2, 0.3])
+    output = model(x)
+    assert output.shape == torch.Size([3])
+
+
+def test_forward_2d_tensor_multiple_observables():
+    M, N = 5, 3
+    x = torch.rand(M, N)
+    circuit = IQPEmbeddingLayer(wires=N)
+    model = MeasurementLayer(
+        circuit,
+        observables=[qml.PauliZ(i) for i in range(3)],
+        measurement_type=MeasurementType.Expectation,
+    )
+    output = model(x)
+    assert output.shape == torch.Size([M, 3])
+
+
+def test_forward_none_input_multiple_observables():
+    circuit = AltRotCXLayer(wires=3)
+    model = MeasurementLayer(
+        circuit,
+        observables=[qml.PauliZ(i) for i in range(3)],
+        measurement_type=MeasurementType.Expectation,
+    )
+    output = model()
+    assert output.shape == torch.Size([3])

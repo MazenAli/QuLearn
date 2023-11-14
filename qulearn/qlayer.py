@@ -22,6 +22,9 @@ Tensor: TypeAlias = torch.Tensor
 Wires: TypeAlias = Union[int, Iterable[Any]]
 Expectation: TypeAlias = qml.measurements.ExpectationMP
 Observable: TypeAlias = qml.operation.Observable
+Observables: TypeAlias = Union[
+    qml.operation.Observable, Iterable[qml.operation.Observable]
+]
 Probability: TypeAlias = qml.measurements.ProbabilityMP
 Sample: TypeAlias = qml.measurements.SampleMP
 Entropy: TypeAlias = qml.measurements.VnEntropyMP
@@ -691,9 +694,9 @@ class MeasurementLayer(nn.Module):
     :type qdevice: Optional[QDevice], defaults to None
     :param measurement_type: Type of quantum measurement.
     :type measurement_type: MeasurementType, defaults to MeasurementType.Probabilities
-    :param observable: Observable to measure.
+    :param observables: Observables to measure.
         None only works with Probabilities and Samples.
-    :type observable: Optional[Observable], defaults to None
+    :type observables: Optional[Observables], defaults to None
     :param kwargs: Additional keyword arguments for qml.QNode.
     """
 
@@ -702,7 +705,7 @@ class MeasurementLayer(nn.Module):
         *circuits,
         qdevice: Optional[QDevice] = None,
         measurement_type: MeasurementType = MeasurementType.Probabilities,
-        observable: Optional[Observable] = None,
+        observables: Optional[Observables] = None,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -715,7 +718,11 @@ class MeasurementLayer(nn.Module):
 
         self.wires = self.circuits[0].wires
         self.measurement_type = measurement_type
-        self.observable = observable
+
+        self.observables = observables
+        if observables is not None and not isinstance(observables, Iterable):
+            self.observables = [observables]
+
         self.interface = kwargs.pop("interface", "torch")
         self.diff_method = kwargs.pop("diff_method", "backprop")
         self.kwargs = kwargs
@@ -739,16 +746,13 @@ class MeasurementLayer(nn.Module):
         if x is not None:
             if len(x.shape) == 1:
                 out = self.qnode(x)
-                if self.measurement_type == MeasurementType.Expectation:
-                    out = torch.unsqueeze(out, 0)
+                # if self.measurement_type == MeasurementType.Expectation:
+                #    out = torch.unsqueeze(out, 0)
             else:
                 outs = [self.qnode(xk) for xk in torch.unbind(x)]
-                if self.measurement_type == MeasurementType.Expectation:
-                    outs = [torch.unsqueeze(out, 0) for out in outs]
                 out = torch.stack(outs)
         elif self.measurement_type == MeasurementType.Expectation:
             out = self.qnode(x)
-            out = torch.unsqueeze(out, 0)
         else:
             out = self.qnode(x)
 
@@ -765,7 +769,11 @@ class MeasurementLayer(nn.Module):
         """
         for circuit in self.circuits:
             circuit(x)
-        expec = qml.expval(self.observable)
+
+        expec = None
+        if self.observables is not None:
+            expec = [qml.expval(obs) for obs in self.observables]
+
         return expec
 
     def probabilities(self, x: Optional[Tensor] = None) -> Probability:
@@ -853,7 +861,7 @@ class MeasurementLayer(nn.Module):
                 f"Measurement type ({self.measurement_type}) not recognized"
             )
         if self.measurement_type == MeasurementType.Expectation:
-            if self.observable is None:
+            if self.observables is None:
                 raise ValueError(
                     f"Measurement type ({self.measurement_type}) "
                     "requires an observable"
@@ -892,7 +900,7 @@ class HamiltonianLayer(MeasurementLayer):
     def __init__(
         self,
         *circuits,
-        observables: List[Observable],
+        observables: Iterable[Observable],
         qdevice: Optional[QDevice] = None,
         cdevice=None,
         dtype=None,
@@ -902,10 +910,9 @@ class HamiltonianLayer(MeasurementLayer):
             *circuits,
             qdevice=qdevice,
             measurement_type=MeasurementType.Expectation,
-            observable=observables[0],
+            observables=observables,
             **kwargs,
         )
-        self.observables = observables
         self.cdevice = cdevice
         self.dtype = dtype
 

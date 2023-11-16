@@ -395,3 +395,12 @@ def test_forward_none_input_multiple_observables():
     )
     output = model()
     assert output.shape == torch.Size([3])
+
+
+def test_forward_1d_tensor_hamiltonian():
+    circuit = ParallelIQPEncoding(wires=2, num_features=1)
+    observables = [qml.Identity(0), qml.PauliZ(0)]
+    model = HamiltonianLayer(circuit, observables=observables)
+    x = torch.randn((5, 1))
+    output = model(x)
+    assert output.shape == torch.Size([5, 1])

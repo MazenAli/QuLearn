@@ -746,11 +746,11 @@ class MeasurementLayer(nn.Module):
         if x is not None:
             if len(x.shape) == 1:
                 out = self.qnode(x)
-                # if self.measurement_type == MeasurementType.Expectation:
-                #    out = torch.unsqueeze(out, 0)
             else:
                 outs = [self.qnode(xk) for xk in torch.unbind(x)]
                 out = torch.stack(outs)
+                if len(out.shape) == 1:
+                    out = out.unsqueeze(1)
         elif self.measurement_type == MeasurementType.Expectation:
             out = self.qnode(x)
         else:

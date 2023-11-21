@@ -404,3 +404,22 @@ def test_forward_1d_tensor_hamiltonian():
     x = torch.randn((5, 1))
     output = model(x)
     assert output.shape == torch.Size([5, 1])
+
+
+def test_forward_shape_3D_singleobs_hamiltonian():
+    num_features = 3
+    circuit = IQPEmbeddingLayer(wires=num_features)
+    model = HamiltonianLayer(circuit, observables=[qml.PauliZ(0)])
+    x = torch.randn(num_features)
+    output = model(x)
+    assert output.shape == torch.Size([1])
+
+
+def test_forward_shape_1D_obs_hamiltonian():
+    num_features = 1
+    num_samples = 10
+    circuit = IQPEmbeddingLayer(wires=num_features)
+    model = HamiltonianLayer(circuit, observables=[qml.PauliZ(0)])
+    x = torch.randn((num_samples, num_features))
+    output = model(x)
+    assert output.shape == torch.Size([num_samples, 1])

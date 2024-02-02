@@ -6,6 +6,7 @@ from qulearn.qlayer import (
     CircuitLayer,
     MeasurementLayer,
     IQPEmbeddingLayer,
+    HatBasisQFE,
     RYCZLayer,
     AltRotCXLayer,
     IQPERYCZLayer,
@@ -15,6 +16,7 @@ from qulearn.qlayer import (
     ParallelIQPEncoding,
     ParallelEntangledIQPEncoding,
 )
+from qulearn.hat_basis import HatBasis
 
 
 # Unit tests for CircuitLayer class
@@ -267,7 +269,12 @@ def test_trivial_output():
     wires = 3
     embed = IQPEmbeddingLayer(wires)
     var = RYCZLayer(wires)
-    observables = [qml.Identity(0), qml.PauliZ(0), qml.PauliZ(1), qml.Identity(2)]
+    observables = [
+        qml.Identity(0),
+        qml.PauliZ(0),
+        qml.PauliZ(1),
+        qml.Identity(2),
+    ]
     ham_layer = HamiltonianLayer(embed, var, observables=observables)
     for name, param in ham_layer.named_parameters():
         if name == "observable_weights":
@@ -354,7 +361,9 @@ def test_parallel_entangled_iqp_encoding():
 def test_forward_1d_tensor_single_observable():
     circuit = IQPEmbeddingLayer(wires=1)
     model = MeasurementLayer(
-        circuit, observables=qml.PauliZ(0), measurement_type=MeasurementType.Expectation
+        circuit,
+        observables=qml.PauliZ(0),
+        measurement_type=MeasurementType.Expectation,
     )
     x = torch.tensor([0.1])
     output = model(x)
@@ -423,3 +432,33 @@ def test_forward_shape_1D_obs_hamiltonian():
     x = torch.randn((num_samples, num_features))
     output = model(x)
     assert output.shape == torch.Size([num_samples, 1])
+
+
+@pytest.fixture
+def sample_hat_basis():
+    return HatBasis(a=0, b=1, num_nodes=4)
+
+
+def test_hat_basis_qfe_initialization(sample_hat_basis):
+    hat_basis_qfe = HatBasisQFE(
+        wires=2, basis=sample_hat_basis, sqrt=True, normalize=True
+    )
+    assert hat_basis_qfe.sqrt is True
+    assert hat_basis_qfe.normalize is True
+
+
+def test_hat_basis_qfe_circuit(sample_hat_basis):
+    x = torch.tensor([0.0])
+    hat_basis_qfe = HatBasisQFE(wires=2, basis=sample_hat_basis)
+    hat_basis_qfe.circuit(x)
+
+    assert hat_basis_qfe.norm == 1.0
+
+
+def test_hat_basis_qfe_compute_norm(sample_hat_basis):
+    x = torch.tensor([1.0])
+    hat_basis_qfe = HatBasisQFE(wires=2, basis=sample_hat_basis)
+    norm = hat_basis_qfe.compute_norm(x)
+
+    assert isinstance(norm, float)
+    assert 1.0 == pytest.approx(norm, abs=1e-4)

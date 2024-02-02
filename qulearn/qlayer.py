@@ -4,13 +4,16 @@ try:
 except ImportError:
     from typing_extensions import TypeAlias
 
-from typing import Iterable, Any, Optional, Union, List, Dict
+from typing import Iterable, Any, Optional, Union, Dict
 
 from enum import Enum
 import math
 import torch
 from torch import nn
 import pennylane as qml
+
+from .hat_basis import HatBasis
+from .mps import HatBasisMPS, MPSQGates
 
 DEFAULT_QDEV_CFG = {"name": "default.qubit", "shots": None}
 
@@ -113,6 +116,113 @@ class IQPEmbeddingLayer(CircuitLayer):
             self.qfunc(x, wires=self.wires, **self.kwargs)
 
 
+class HatBasisQFE(CircuitLayer):
+    """
+    Layer for the 1D hat basis quantum feature embedding.
+
+    :param basis: The hat basis class.
+    :type basis: HatBasis
+    :param wires: The wires to be used by the layer
+    :type wires: Wires
+    :param sqrt: Set flag to take square roots before applying hat basis.
+    :type sqrt: bool
+    :param normalize: Set flag to normalize basis vector before embedding.
+    :type normalize: bool
+    """
+
+    def __init__(
+        self,
+        wires: Wires,
+        basis: HatBasis,
+        sqrt: bool = False,
+        normalize: bool = False,
+    ) -> None:
+        super().__init__(wires)
+        self.basis = basis
+        self.sqrt = sqrt
+        self.normalize = normalize
+        self.norm = 1.0
+        self.hbmps = HatBasisMPS(basis)
+
+    def circuit(self, x: Tensor) -> None:
+        """
+        Define the quantum circuit for this layer.
+
+        :param x: Input tensor that is passed to the quantum circuit.
+        :type x: Tensor
+        """
+
+        position = int(self.basis.position(x))
+        a, b = self.basis.nonz_vals(x)
+
+        if self.sqrt:
+            a = torch.sqrt(a)
+            b = torch.sqrt(b)
+
+        if position == -1:
+            self.norm = b.item()
+            for q in range(self.num_wires):
+                qml.Identity(wires=self.wires[q])
+            return None
+
+        elif position == -2:
+            self.norm = a.item()
+            for q in range(self.num_wires):
+                qml.PauliX(wires=self.wires[q])
+            return None
+
+        self.norm = torch.sqrt(a**2 + b**2).item()
+        if self.normalize:
+            a /= self.norm
+            b /= self.norm
+
+        # for compatibility (TODO: remove)
+        first = a.item()
+        second = b.item()
+
+        mps = self.hbmps.mps_hatbasis(first, second, position)
+        mpsgates = MPSQGates(mps)
+
+        s = mpsgates.max_rank_power
+        Us = mpsgates.qgates()
+        N = len(Us)
+        count = 0
+        for k in range(N - 1, -1, -1):
+            wires_idx = list(
+                range(self.num_wires - count - s - 1, self.num_wires - count)
+            )
+            subwires = [self.wires[idx] for idx in wires_idx]
+            qml.QubitUnitary(Us[k], wires=subwires, unitary_check=False)
+            count += 1
+
+    def compute_norm(self, x: Tensor) -> float:
+        """
+        Compute the norm of the basis vector for the given input x.
+
+        :param x: Input tensor that is passed to basis vector.
+        :type x: Tensor
+        :returns: The norm.
+        :rtype: float
+        """
+        position = int(self.basis.position(x))
+        a, b = self.basis.nonz_vals(x)
+
+        if self.sqrt:
+            a = torch.sqrt(a)
+            b = torch.sqrt(b)
+
+        if position == -1:
+            self.norm = b.item()
+            return self.norm
+
+        elif position == -2:
+            self.norm = a.item()
+            return self.norm
+
+        self.norm = torch.sqrt(a**2 + b**2).item()
+        return self.norm
+
+
 class RYCZLayer(CircuitLayer):
     """
     Layer for the RYCZ (Rotation around Y and Controlled-Z) gates.
@@ -146,7 +256,6 @@ class RYCZLayer(CircuitLayer):
         self.dtype = dtype
         self.kwargs = kwargs
 
-        # weight parameters
         self.initial_layer_weights = torch.nn.Parameter(
             torch.empty(self.num_wires, device=self.cdevice, dtype=self.dtype)
         )
@@ -606,7 +715,10 @@ class ParallelIQPEncoding(CircuitLayer):
         for i in range(0, len(self.wires), num_features):
             x_ = self.base ** (freq * self.omega) * x
             self.qfunc(
-                x_, self.wires[i : i + num_features], self.n_repeat, **self.kwargs
+                x_,
+                self.wires[i : i + num_features],
+                self.n_repeat,
+                **self.kwargs,
             )
             freq += 1
 

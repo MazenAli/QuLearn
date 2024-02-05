@@ -193,6 +193,7 @@ class HatBasisQFE(CircuitLayer):
             )
             subwires = [self.wires[idx] for idx in wires_idx]
             qml.QubitUnitary(Us[k], wires=subwires, unitary_check=False)
+
             count += 1
 
     def compute_norm(self, x: Tensor) -> float:

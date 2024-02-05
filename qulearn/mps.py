@@ -40,8 +40,7 @@ class MPSQGates:
         mps.orthogonalize(N - 1)
 
         Us = []
-
-        core = self.contract(L=self.max_rank_power + 1)
+        core = self.contract(mps=mps, L=self.max_rank_power + 1)
         Q0 = self.left_core_reshape(core)
         Us.append(embed2unitary(Q0))
 
@@ -85,17 +84,19 @@ class MPSQGates:
 
         return mps
 
-    def contract(self, L: int) -> Tensor:
+    def contract(self, mps, L: int) -> Tensor:
         """
         Contracts the first L cores from the left of the MPS to form a single tensor.
 
+        :param mps: The MPS from which quantum gates will be extracted.
+        :type mps: MPS
         :param L: The number of cores to contract.
         :type L: int
         :returns: A Tensor resulting from the contraction of the first L cores.
         :rtype: Tensor
         """
 
-        cores = self.mps.cores
+        cores = mps.cores
         result = cores[0].clone().detach()
         for i in range(1, L):
             result = torch.tensordot(result, cores[i], dims=([result.dim() - 1], [0]))

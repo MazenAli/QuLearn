@@ -156,8 +156,9 @@ class HatBasisQFE(CircuitLayer):
         a, b = self.basis.nonz_vals(x)
 
         if self.sqrt:
-            a = torch.sqrt(a)
-            b = torch.sqrt(b)
+            # sometimes the values are close to 0 and negative
+            a = torch.sqrt(torch.abs(a))
+            b = torch.sqrt(torch.abs(b))
 
         if position == -1:
             self.norm = b.item()

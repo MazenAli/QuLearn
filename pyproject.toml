@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "qulearn"
-version = "0.6.2"
+version = "0.7.0"
 description = "Streamlining quantum and classical machine learning model development."
 authors = ["Mazen Ali <mazen.ali@itwm.fraunhofer.de>"]
 readme = "README.md"

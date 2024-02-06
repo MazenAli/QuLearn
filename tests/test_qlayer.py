@@ -8,7 +8,7 @@ from qulearn.qlayer import (
     IQPEmbeddingLayer,
     HatBasisQFE,
     TwoQubitRotCXMPSLayer,
-    embedU,
+    EmbedU,
     RYCZLayer,
     AltRotCXLayer,
     IQPERYCZLayer,
@@ -481,6 +481,6 @@ def test_TwoQubitRotCXMPSLayer_initialization():
 def test_embedU_initialization():
     wires = 2
     U = torch.eye(4)
-    layer = embedU(wires=wires, U=U)
+    layer = EmbedU(wires=wires, U=U)
 
     assert torch.equal(layer.U, U)

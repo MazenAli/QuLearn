@@ -894,7 +894,7 @@ class TwoQubitRotCXMPSLayer(CircuitLayer):
             qml.CNOT(wires=(qprev, qnext))
 
 
-class embedU(CircuitLayer):
+class EmbedU(CircuitLayer):
     """
     Layer that embeds an arbitrary unitary.
 

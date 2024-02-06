@@ -7,6 +7,8 @@ from qulearn.qlayer import (
     MeasurementLayer,
     IQPEmbeddingLayer,
     HatBasisQFE,
+    TwoQubitRotCXMPSLayer,
+    embedU,
     RYCZLayer,
     AltRotCXLayer,
     IQPERYCZLayer,
@@ -462,3 +464,23 @@ def test_hat_basis_qfe_compute_norm(sample_hat_basis):
 
     assert isinstance(norm, float)
     assert 1.0 == pytest.approx(norm, abs=1e-4)
+
+
+def test_TwoQubitRotCXMPSLayer_initialization():
+    wires = 4
+    layer = TwoQubitRotCXMPSLayer(wires=wires)
+
+    assert layer.n_layers_mps == 1
+    assert layer.n_layers_block == 1
+    assert not layer.reverse
+    assert layer.n_blocks == wires - 1
+    assert layer.weights.shape == (1, 3, 2, 1, 3)
+    assert layer.weights_post.shape == (wires, 3)
+
+
+def test_embedU_initialization():
+    wires = 2
+    U = torch.eye(4)
+    layer = embedU(wires=wires, U=U)
+
+    assert torch.equal(layer.U, U)

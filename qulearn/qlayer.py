@@ -796,6 +796,128 @@ class ParallelEntangledIQPEncoding(CircuitLayer):
         self.qfunc(x_final, self.wires, self.n_repeat, **self.kwargs)
 
 
+class TwoQubitRotCXMPSLayer(CircuitLayer):
+    """
+    Layer with 2-qubit MPS sctructure.
+
+    :param wires: The wires to be used by the layer.
+    :type wires: Wires
+    :param n_layers_mps: The number of layers to repeat the MPS,
+        defaults to 1.
+    :type n_layers: int, optional
+    :param n_layers_block: The number of layers for each block of the MPS,
+        defaults to 1.
+    :type n_layers_block: int, optional
+    :param reverse: Flag to reverse the MPS sequence to bottom to top,
+        defaults to False.
+    :type reverse: bool, optional
+    :param cdevice: Classical device to store the initial layer weights
+        and internal layer weights, defaults to None.
+    :type cdevice: CDevice, optional
+    :param dtype: Data type of the weights, defaults to None.
+    :type dtype: DType, optional
+    """
+
+    def __init__(
+        self,
+        wires: Wires,
+        n_layers_mps: int = 1,
+        n_layers_block: int = 1,
+        reverse: bool = False,
+        cdevice: Optional[CDevice] = None,
+        dtype: Optional[DType] = None,
+    ) -> None:
+        super().__init__(wires)
+
+        self.n_layers_mps = n_layers_mps
+        self.n_layers_block = n_layers_block
+        self.reverse = reverse
+        self.cdevice = cdevice
+        self.dtype = dtype
+        self.n_blocks = self.num_wires - 1
+
+        self.weights = torch.nn.Parameter(
+            torch.empty(
+                (self.n_layers_mps, self.n_blocks, 2, self.n_layers_block, 3),
+                device=self.cdevice,
+                dtype=self.dtype,
+            )
+        )
+        self.weights_post = torch.nn.Parameter(
+            torch.empty((self.num_wires, 3), device=self.cdevice, dtype=self.dtype)
+        )
+
+        nn.init.uniform_(self.weights, a=0.0, b=2 * math.pi)
+        nn.init.uniform_(self.weights_post, a=0.0, b=2 * math.pi)
+
+    def circuit(self, _: Optional[Tensor] = None) -> None:
+        """
+        Define the quantum circuit for this layer.
+
+        :param _: Input tensor that is passed to the quantum circuit (ignored).
+        :type x: Optional[Tensor]
+        """
+
+        for mps_layer_idx in range(self.n_layers_mps):
+            for block_idx in (
+                range(self.n_blocks - 1, -1, -1)
+                if self.reverse
+                else range(self.n_blocks)
+            ):
+                self._block(mps_layer_idx, block_idx)
+
+        for i, q in enumerate(self.wires):
+            qml.Rot(
+                self.weights_post[i, 0],
+                self.weights_post[i, 1],
+                self.weights_post[i, 2],
+                q,
+            )
+
+    def _block(self, mps_layer_idx, block_idx):
+        qprev = self.wires[block_idx]
+        qnext = self.wires[block_idx + 1]
+
+        for block_layer in range(self.n_layers_block):
+            qml.Rot(
+                self.weights[mps_layer_idx, block_idx, 0, block_layer, 0],
+                self.weights[mps_layer_idx, block_idx, 0, block_layer, 1],
+                self.weights[mps_layer_idx, block_idx, 0, block_layer, 2],
+                qprev,
+            )
+            qml.Rot(
+                self.weights[mps_layer_idx, block_idx, 1, block_layer, 0],
+                self.weights[mps_layer_idx, block_idx, 1, block_layer, 1],
+                self.weights[mps_layer_idx, block_idx, 1, block_layer, 2],
+                qnext,
+            )
+            qml.CNOT(wires=(qprev, qnext))
+
+
+class embedU(CircuitLayer):
+    """
+    Layer that embeds an arbitrary unitary.
+
+    :param wires: The wires to be used by the layer.
+    :type wires: Wires
+    :param U: The unitary to embed.
+    :type U: Tensor.
+    """
+
+    def __init__(self, wires: Wires, U: Tensor) -> None:
+        super().__init__(wires)
+        self.U = U
+
+    def circuit(self, _: Optional[Tensor] = None) -> None:
+        """
+        Define the quantum circuit for this layer.
+
+        :param _: Input tensor that is passed to the quantum circuit (ignored).
+        :type x: Optional[Tensor]
+        """
+        qml.QubitUnitary(self.U, wires=self.wires, unitary_check=False)
+
+
 class MeasurementLayer(nn.Module):
     """
     Base class for measurment layers.

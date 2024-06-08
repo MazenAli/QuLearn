@@ -193,7 +193,7 @@ class HatBasisMPS:
 
     def mps_hatbasis(self, first: float, second: float, idx: int) -> MPS:
         """
-        Generates an MPS the hat basis vector.
+        Generates an MPS for the hat basis vector.
 
         :param first: The first non-zero value in the hat basis function.
         :type first: float

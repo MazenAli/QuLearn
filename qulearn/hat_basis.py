@@ -35,9 +35,9 @@ class HatBasis:
         """
         Find the index of the grid point left of x.
 
-        :param x: A tensor containing the values for which the the position indeces are to be found.
+        :param x: A tensor containing the values for which the position indexes are to be found.
         :type x: Tensor
-        :returns: A tensors of position indeces.
+        :returns: A tensors of position indexes.
         The position indices are -1 for values left of `a`, and -2 for values right of `b`.
         :rtype: Tensor
         """

@@ -42,8 +42,8 @@ class HatBasis:
         :rtype: Tensor
         """
 
-        left_of_a = x < self.a
-        right_of_b = x > self.b
+        left_of_a = x <= self.a
+        right_of_b = x >= self.b
 
         within_range = torch.logical_not(torch.logical_or(left_of_a, right_of_b))
         position = torch.zeros_like(x)

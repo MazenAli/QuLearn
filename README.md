@@ -134,4 +134,4 @@ This project is licensed under the terms of the [MIT License](LICENSE).
 <a id="contact"></a>
 
 - Name: Mazen Ali
-- Email: mazen.ali@itwm.fraunhofer.de
+- Email: mazen.ali90@gmail.com

@@ -14,6 +14,7 @@ import pennylane as qml
 
 from .hat_basis import HatBasis
 from .mps import HatBasisMPS, MPSQGates
+from .mps_kronprod import kron, zkron
 
 DEFAULT_QDEV_CFG = {"name": "default.qubit", "shots": None}
 
@@ -307,7 +308,7 @@ class Linear2DBasisQFE(CircuitLayer):
         mps2 = self.hbmps.mps_hatbasis(first2, second2, position2)
 
         if self.zorder:
-            mps = zkron2(mps2, mps1)
+            mps = zkron(mps2, mps1)
         else:
             mps = kron(mps2, mps1)
 

@@ -34,7 +34,7 @@ def test_compute_max_rank_power(sample_mps):
 
 def test_embed2unitary():
     A = torch.rand(4, 2)
-    Q, _ = torch.qr(A)
+    Q, _ = torch.linalg.qr(A)
     U = embed2unitary(Q)
     assert torch.allclose(U @ U.T, torch.eye(U.shape[0]), atol=1e-6)
 

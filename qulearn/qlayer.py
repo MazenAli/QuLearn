@@ -225,6 +225,151 @@ class HatBasisQFE(CircuitLayer):
         return self.norm
 
 
+class Linear2DBasisQFE(CircuitLayer):
+    """
+    Layer for the 2D hat basis quantum feature embedding.
+
+    :param basis: The hat basis class.
+    :type basis: HatBasis
+    :param wires: The wires to be used by the layer
+    :type wires: Wires
+    :param sqrt: Set flag to take square roots before applying hat basis.
+    :type sqrt: bool
+    :param normalize: Set flag to normalize basis vector before embedding.
+    :type normalize: bool
+    """
+
+    def __init__(
+            self,
+            wires: Wires,
+            basis: HatBasis,
+            sqrt: bool = False,
+            normalize: bool = False,
+            zorder: bool = False,
+    ) -> None:
+        super().__init__(wires)
+        self.basis = basis
+        self.sqrt = sqrt
+        self.normalize = normalize
+        self.norm = 1.0
+        self.hbmps = HatBasisMPS(basis)
+        self.zorder = zorder
+        self.mps = None
+        self.mps1 = None
+        self.mps2 = None
+
+    def circuit(self, x: Tensor) -> None:
+        """
+        Define the quantum circuit for this layer.
+
+        :param x: Input tensor that is passed to the quantum circuit.
+        :type x: Tensor
+        """
+        self._check_input(x)
+
+        x1 = x[0]
+        x2 = x[1]
+        position1 = int(self.basis.position(x1))
+        position2 = int(self.basis.position(x2))
+        a1, b1 = self.basis.nonz_vals(x1)
+        a2, b2 = self.basis.nonz_vals(x2)
+
+        if self.sqrt:
+            # sometimes the values are close to 0 and negative
+            a1 = torch.sqrt(torch.abs(a1))
+            b1 = torch.sqrt(torch.abs(b1))
+            a2 = torch.sqrt(torch.abs(a2))
+            b2 = torch.sqrt(torch.abs(b2))
+
+        # TODO: cover the case where x or y are outside of bounds
+
+        val1 = a1 * a2
+        val2 = a1 * b2
+        val3 = a2 * b1
+        val4 = a2 * b2
+        self.norm = torch.sqrt(val1 ** 2 + val2 ** 2 + val3 ** 2 + val4 ** 2)
+
+        if self.normalize:
+            a1 /= torch.sqrt(self.norm)
+            b1 /= torch.sqrt(self.norm)
+            a2 /= torch.sqrt(self.norm)
+            b2 /= torch.sqrt(self.norm)
+
+        self.norm = self.norm.item()
+
+        # for compatibility (TODO: remove)
+        first1 = a1.item()
+        second1 = b1.item()
+        first2 = a2.item()
+        second2 = b2.item()
+
+        mps1 = self.hbmps.mps_hatbasis(first1, second1, position1)
+        mps2 = self.hbmps.mps_hatbasis(first2, second2, position2)
+
+        if self.zorder:
+            mps = zkron2(mps2, mps1)
+        else:
+            mps = kron(mps2, mps1)
+
+        self.mps1 = mps1
+        self.mps2 = mps2
+        self.mps = mps
+        mpsgates = MPSQGates(mps)
+
+        s = mpsgates.max_rank_power
+        Us = mpsgates.qgates()
+        N = len(Us)
+        count = 0
+        for k in range(N - 1, -1, -1):
+            wires_idx = list(
+                range(self.num_wires - count - s - 1, self.num_wires - count)
+            )
+            subwires = [self.wires[idx] for idx in wires_idx]
+            qml.QubitUnitary(Us[k], wires=subwires, unitary_check=False)
+
+            count += 1
+
+    def compute_norm(self, x: Tensor) -> float:
+        """
+        Compute the norm of the basis vector for the given input x.
+
+        :param x: Input tensor that is passed to basis vector.
+        :type x: Tensor
+        :returns: The norm.
+        :rtype: float
+        """
+        self._check_input(x)
+
+        x1 = x[0]
+        x2 = x[1]
+        a1, b1 = self.basis.nonz_vals(x1)
+        a2, b2 = self.basis.nonz_vals(x2)
+
+        if self.sqrt:
+            # sometimes the values are close to 0 and negative
+            a1 = torch.sqrt(torch.abs(a1))
+            b1 = torch.sqrt(torch.abs(b1))
+            a2 = torch.sqrt(torch.abs(a2))
+            b2 = torch.sqrt(torch.abs(b2))
+
+        # TODO: cover the case where x or y are outside of bounds
+
+        val1 = a1 * a2
+        val2 = a1 * b2
+        val3 = a2 * b1
+        val4 = a2 * b2
+        self.norm = torch.sqrt(val1 ** 2 + val2 ** 2 + val3 ** 2 + val4 ** 2).item()
+
+        return self.norm
+
+    def _check_input(self, x: Tensor):
+        if x.dim() > 2:
+            raise ValueError("Input tensor must have 2 dimensions")
+
+        if torch.any(torch.abs(x) >= 1):
+            raise ValueError("Out of bounds case is not implemented")
+
+
 class RYCZLayer(CircuitLayer):
     """
     Layer for the RYCZ (Rotation around Y and Controlled-Z) gates.

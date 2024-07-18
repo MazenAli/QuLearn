@@ -2,7 +2,7 @@
 name = "qulearn"
 version = "0.7.0"
 description = "Streamlining quantum and classical machine learning model development."
-authors = ["Mazen Ali <mazen.ali@itwm.fraunhofer.de>"]
+authors = ["Mazen Ali <mazen.ali90@gmail.com>"]
 readme = "README.md"
 packages = [{include = "qulearn"}]
 

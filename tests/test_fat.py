@@ -1,5 +1,3 @@
-import os
-import tempfile
 import torch
 from torch.nn import Linear
 from torch.optim import Adam

@@ -1,20 +1,38 @@
-# Minimal makefile for Sphinx documentation
+# Minimal makefile for Sphinx documentation and project maintenance tasks
 #
 
-# You can set these variables from the command line, and also
-# from the environment for the first two.
+# Variables that can be set from the command line or environment
 SPHINXOPTS    ?=
 SPHINXBUILD   ?= sphinx-build
 SOURCEDIR     = docs
 BUILDDIR      = build
 
-# Put it first so that "make" without argument is like "make help".
+# Default target executed when no arguments are given to make.
+default: all
+
+all: help format static test
+
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-.PHONY: help Makefile
+# Code formatting and static analysis
+format:
+	black --line-length 100 .
+	isort --multi-line 3 --trailing-comma --force-grid-wrap 0 --use-parentheses --line-width 100 .
 
-# Catch-all target: route all unknown targets to Sphinx using the new
-# "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
-%: Makefile
-	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+format_check:
+	black --line-length 100 --check .
+	isort --multi-line 3 --trailing-comma --force-grid-wrap 0 --use-parentheses --line-width 100 . --check-only
+
+static:
+	flake8 qulearn tests
+	mypy qulearn tests --ignore-missing-imports --no-strict-optional
+
+# Testing
+test:
+	pytest tests/
+
+test_coverage:
+	coverage run --source=qulearn --module pytest -v tests/ && coverage report -m
+
+.PHONY: help format format_check static test test_coverage

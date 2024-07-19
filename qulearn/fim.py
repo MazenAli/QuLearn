@@ -322,7 +322,8 @@ def empirical_fim(model: Model, features: Tensor) -> Tensor:
     :raises ValueError: If invalid features format.
 
     .. note::
-        This function assumes that the output of the model is a differentiable tensor of probabilities.
+        This function assumes that the output of the model is a differentiable
+        tensor of probabilities.
     """
 
     _check_features(features)

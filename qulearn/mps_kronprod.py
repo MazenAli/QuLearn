@@ -28,6 +28,7 @@ def kron(tleft: MPS, tright: MPS) -> MPS:
 
     return t3
 
+
 def zkron(tleft: MPS, tright: MPS) -> MPS:
     """
     Performs the z-ordered Kronecker product of two MPS tensors.

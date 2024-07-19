@@ -60,9 +60,11 @@ class HatBasis:
         """
         Finds the grid points surrounding given values in the discretized space.
 
-        :param x: A tensor containing the values for which the surrounding grid points are to be found.
+        :param x: A tensor containing the values for which the surrounding
+        grid points are to be found.
         :type x: Tensor
-        :returns: A tuple of two tensors. The first tensor contains the left boundary points of the segments, the second tensor contains the right boundary points of the segments.
+        :returns: A tuple of two tensors. The first tensor contains the left boundary points
+        of the segments, the second tensor contains the right boundary points of the segments.
         :rtype: Tuple[Tensor, Tensor]
         """
 

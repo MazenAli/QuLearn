@@ -3,8 +3,10 @@ import numpy as np
 import tntorch as tn
 from qulearn.mps_kronprod import kron, zkron
 
+
 def tensor_to_vector(tensor):
     return tensor.numpy().reshape(-1)
+
 
 def test_kron():
     t1 = tn.randn([2]*3)
@@ -19,6 +21,7 @@ def test_kron():
     delta = np.linalg.norm(T3_expected - T3)
 
     assert delta < 1e-5, f"Delta too large: {delta}"
+
 
 def test_zkron():
     t1 = tn.randn([2]*3)
@@ -35,6 +38,7 @@ def test_zkron():
     delta = np.linalg.norm(T4 - T5)
 
     assert delta < 1e-5, f"Delta too large: {delta}"
+
 
 def test_core_length_mismatch():
     t1 = tn.randn([2]*3)

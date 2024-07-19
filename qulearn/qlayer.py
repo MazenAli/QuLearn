@@ -230,7 +230,7 @@ class Linear2DBasisQFE(CircuitLayer):
     """
     Layer for the 2D hat basis quantum feature embedding.
 
-    :param basis: The hat basis class.
+    :param basis: The 1D hat basis class.
     :type basis: HatBasis
     :param wires: The wires to be used by the layer
     :type wires: Wires
@@ -839,11 +839,13 @@ class ParallelIQPEncoding(CircuitLayer):
 
         if not self.num_wires >= self.num_features:
             raise ValueError(
-                f"The number of wires ({self.num_wires}) must be greater than or equal to the number of features ({self.num_features})."
+                f"The number of wires ({self.num_wires}) "
+                f"must be greater than or equal to the number of features ({self.num_features})."
             )
         if not self.num_wires % self.num_features == 0:
             raise ValueError(
-                f"The number of wires ({self.num_wires}) must be a multiple of the number of features ({self.num_features})."
+                f"The number of wires ({self.num_wires}) "
+                f"must be a multiple of the number of features ({self.num_features})."
             )
 
     def circuit(self, x: Tensor) -> None:
@@ -856,7 +858,8 @@ class ParallelIQPEncoding(CircuitLayer):
         num_features = x.shape[-1]
         if num_features != self.num_features:
             raise ValueError(
-                f"Input tensor last dimension ({num_features}) must be equal to the number of features ({self.num_features})."
+                f"Input tensor last dimension ({num_features}) "
+                f"must be equal to the number of features ({self.num_features})."
             )
 
         freq = 0
@@ -864,7 +867,7 @@ class ParallelIQPEncoding(CircuitLayer):
             x_ = self.base ** (freq * self.omega) * x
             self.qfunc(
                 x_,
-                self.wires[i : i + num_features],
+                self.wires[i: i + num_features],
                 self.n_repeat,
                 **self.kwargs,
             )
@@ -911,11 +914,13 @@ class ParallelEntangledIQPEncoding(CircuitLayer):
 
         if not self.num_wires >= self.num_features:
             raise ValueError(
-                f"The number of wires ({self.num_wires}) must be greater than or equal to the number of features ({self.num_features})."
+                f"The number of wires ({self.num_wires}) "
+                f"must be greater than or equal to the number of features ({self.num_features})."
             )
         if not self.num_wires % self.num_features == 0:
             raise ValueError(
-                f"The number of wires ({self.num_wires}) must be a multiple of the number of features ({self.num_features})."
+                f"The number of wires ({self.num_wires}) "
+                f"must be a multiple of the number of features ({self.num_features})."
             )
 
     def circuit(self, x: Tensor) -> None:
@@ -928,7 +933,8 @@ class ParallelEntangledIQPEncoding(CircuitLayer):
         num_features = x.shape[-1]
         if num_features != self.num_features:
             raise ValueError(
-                f"Input tensor last dimension ({num_features}) must be equal to the number of features ({self.num_features})."
+                f"Input tensor last dimension ({num_features}) "
+                f"must be equal to the number of features ({self.num_features})."
             )
 
         num_repeats = int(self.num_wires / num_features)

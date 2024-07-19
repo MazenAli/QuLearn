@@ -7,6 +7,7 @@ from qulearn.qlayer import (
     MeasurementLayer,
     IQPEmbeddingLayer,
     HatBasisQFE,
+    Linear2DBasisQFE,
     TwoQubitRotCXMPSLayer,
     EmbedU,
     RYCZLayer,
@@ -211,7 +212,6 @@ def test_embed_altrotvar_layer_circuit(mock_embed_altrotvar_layer):
 
 def test_embed_ryczvar_layer_num_parameters(mock_embed_ryczvar_layer):
     layer = mock_embed_ryczvar_layer
-    x = torch.tensor([0.1, 0.2])
     num_parameters = sum(p.numel() for p in layer.parameters())
     num_qubits = len(layer.wires)
     expected = layer.num_repeat * (num_qubits + 2 * (num_qubits - 1))
@@ -220,7 +220,6 @@ def test_embed_ryczvar_layer_num_parameters(mock_embed_ryczvar_layer):
 
 def test_embed_altrotvar_layer_num_parameters(mock_embed_altrotvar_layer):
     layer = mock_embed_altrotvar_layer
-    x = torch.tensor([0.1, 0.2])
     num_parameters = sum(p.numel() for p in layer.parameters())
     num_qubits = len(layer.wires)
     expected = layer.num_repeat * 3 * (num_qubits + 2 * (num_qubits - 1))
@@ -462,6 +461,27 @@ def test_hat_basis_qfe_compute_norm(sample_hat_basis):
     hat_basis_qfe = HatBasisQFE(wires=2, basis=sample_hat_basis)
     norm = hat_basis_qfe.compute_norm(x)
 
+    assert isinstance(norm, float)
+    assert 1.0 == pytest.approx(norm, abs=1e-4)
+
+
+def test_Linear2DBasisQFE_initialization(sample_hat_basis):
+    layer = Linear2DBasisQFE(wires=2, basis=sample_hat_basis, sqrt=True, normalize=True)
+    assert layer.sqrt is True
+    assert layer.normalize is True
+
+
+def test_Linear2DBasisQFE_circuit(sample_hat_basis):
+    x = torch.tensor([0.0, 0.0])
+    layer = Linear2DBasisQFE(wires=4, basis=sample_hat_basis)
+    layer.circuit(x)
+    assert layer.norm == pytest.approx(1.0, abs=1e-4)
+
+
+def test_Linear2DBasisQFE_compute_norm(sample_hat_basis):
+    x = torch.tensor([0.0, 0.0])
+    layer = Linear2DBasisQFE(wires=4, basis=sample_hat_basis)
+    norm = layer.compute_norm(x)
     assert isinstance(norm, float)
     assert 1.0 == pytest.approx(norm, abs=1e-4)
 

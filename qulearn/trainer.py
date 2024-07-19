@@ -258,8 +258,8 @@ class RidgeRegression:
 
         K = model.kernel_matrix(inputs, inputs)
         num_samples = inputs.shape[0]
-        I = torch.eye(num_samples, dtype=labels.dtype, device=labels.device)
-        M = K + self.lambda_reg * I
+        Id = torch.eye(num_samples, dtype=labels.dtype, device=labels.device)
+        M = K + self.lambda_reg * Id
         alpha = nn.Parameter(torch.linalg.solve(M, labels))
 
         return alpha

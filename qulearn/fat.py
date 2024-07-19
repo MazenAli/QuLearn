@@ -1,25 +1,14 @@
-# for python < 3.10
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing_extensions import TypeAlias
-
 import logging
 
-import pennylane as qml
 import torch
 
-from .datagen import DataGenFat
-from .trainer import SupervisedTrainer
-
-Tensor: TypeAlias = torch.Tensor
-Model: TypeAlias = qml.QNode
-Datagen: TypeAlias = DataGenFat
-Trainer: TypeAlias = SupervisedTrainer
+from .datagen import DataGenFat as Datagen
+from .trainer import SupervisedTrainer as Trainer
+from .types import QModel, Tensor
 
 
 def fat_shattering_dim(
-    model: Model,
+    model: QModel,
     datagen: Datagen,
     trainer: Trainer,
     dmin: int,
@@ -31,7 +20,7 @@ def fat_shattering_dim(
     Estimate the fat-shattering dimension for a model with a given architecture.
 
     :param model: The model.
-    :type model: Model
+    :type model: QModel
     :param datagen: The (synthetic) data generator.
     :type datagen: Datagen
     :param trainer: The trainer.
@@ -65,13 +54,13 @@ def fat_shattering_dim(
 
 
 def check_shattering(
-    model: Model, datagen: Datagen, trainer: Trainer, d: int, gamma: float
+    model: QModel, datagen: Datagen, trainer: Trainer, d: int, gamma: float
 ) -> bool:
     """
     Check if the model shatters a given dimension d with margin value gamma.
 
     :param model: The model.
-    :type model: Model
+    :type model: QModel
     :param datagen: The (synthetic) data generator.
     :type datagen: Datagen
     :param trainer: The trainer.

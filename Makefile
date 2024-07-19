@@ -10,7 +10,7 @@ BUILDDIR      = build
 # Default target executed when no arguments are given to make.
 default: all
 
-all: format format_check static docs-html test test_coverage
+all: docs-html format format_check static test_coverage
 
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)

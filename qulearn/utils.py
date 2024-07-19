@@ -1,21 +1,10 @@
 """Frequently used functions."""
 
-from typing import Dict, List, Tuple
-
-# for python < 3.10
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing_extensions import TypeAlias
-
 import math
 from itertools import chain, combinations
+from typing import Dict, List, Tuple
 
-import pennylane as qml
-import torch
-
-Tensor: TypeAlias = torch.Tensor
-Observable: TypeAlias = qml.Hamiltonian
+from .types import Observable, Tensor
 
 
 def probabilities_to_dictionary(probs: Tensor) -> Dict[str, Tensor]:

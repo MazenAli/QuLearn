@@ -1,12 +1,6 @@
-# for python < 3.10
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing_extensions import TypeAlias
-
 import math
 from enum import Enum
-from typing import Any, Dict, Iterable, Optional, Union
+from typing import Dict, Iterable, Optional
 
 import pennylane as qml
 import torch
@@ -15,21 +9,22 @@ from torch import nn
 from .hat_basis import HatBasis
 from .mps import HatBasisMPS, MPSQGates
 from .mps_kronprod import kron, zkron
+from .types import (
+    CDevice,
+    DType,
+    Entropy,
+    Expectation,
+    Observable,
+    Observables,
+    Probability,
+    QDevice,
+    QNode,
+    Sample,
+    Tensor,
+    Wires,
+)
 
 DEFAULT_QDEV_CFG = {"name": "default.qubit", "shots": None}
-
-QDevice: TypeAlias = qml.Device
-CDevice: TypeAlias = torch.device
-DType: TypeAlias = torch.dtype
-QNode: TypeAlias = qml.QNode
-Tensor: TypeAlias = torch.Tensor
-Wires: TypeAlias = Union[int, Iterable[Any]]
-Expectation: TypeAlias = qml.measurements.ExpectationMP
-Observable: TypeAlias = qml.operation.Observable
-Observables: TypeAlias = Union[qml.operation.Observable, Iterable[qml.operation.Observable]]
-Probability: TypeAlias = qml.measurements.ProbabilityMP
-Sample: TypeAlias = qml.measurements.SampleMP
-Entropy: TypeAlias = qml.measurements.VnEntropyMP
 
 
 class MeasurementType(Enum):

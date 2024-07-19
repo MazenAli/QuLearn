@@ -1,14 +1,8 @@
-# for python < 3.10
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing_extensions import TypeAlias
-
 from typing import Tuple
 
 import torch
 
-Tensor: TypeAlias = torch.Tensor
+from .types import Tensor
 
 
 class HatBasis:

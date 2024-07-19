@@ -1,24 +1,14 @@
-# for python < 3.10
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing_extensions import TypeAlias
-
 from typing import Optional
 
 import pennylane as qml
 import torch
 from torch import nn
 
-from .qlayer import CircuitLayer
+from .qlayer import CircuitLayer as FeatureEmbed
 
 DEFAULT_QDEV_CFG = {"name": "default.qubit", "shots": None}
 
-FeatureEmbed: TypeAlias = CircuitLayer
-Tensor: TypeAlias = torch.Tensor
-QDevice: TypeAlias = qml.Device
-QNode: TypeAlias = qml.QNode
-Expectation: TypeAlias = qml.measurements.ExpectationMP
+from .types import Expectation, QDevice, QNode, Tensor
 
 
 class QKernel(nn.Module):

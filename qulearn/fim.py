@@ -1,20 +1,10 @@
-from typing import Iterable, List
-
-# for python < 3.10
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing_extensions import TypeAlias
-
 import math
 from math import pi
+from typing import List
 
 import torch
-from torch.nn import Module
 
-Tensor: TypeAlias = torch.Tensor
-Model: TypeAlias = Module
-ParameterList: TypeAlias = List[Iterable[Tensor]]
+from .types import Model, ParameterList, Tensor
 
 
 def compute_effdim(

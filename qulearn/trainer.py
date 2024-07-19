@@ -1,31 +1,11 @@
-from typing import Callable, Dict, Optional
-
-# for python < 3.10
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing_extensions import TypeAlias
-
-import logging
 from enum import Enum
+from typing import Dict, Optional
 
-import pennylane as qml
 import torch
 from torch import nn
-from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
 
 from .qkernel import QKernel
-
-Optimizer: TypeAlias = torch.optim.Optimizer
-Loss: TypeAlias = torch.nn.Module
-Metric: TypeAlias = Callable
-Writer: TypeAlias = SummaryWriter
-Logger: TypeAlias = logging.Logger
-Model: TypeAlias = qml.QNode
-Loader: TypeAlias = DataLoader
-Tensor: TypeAlias = torch.Tensor
-Parameter: TypeAlias = nn.Parameter
+from .types import DataLoader, Logger, Loss, Metric, Model, Optimizer, Parameter, Tensor, Writer
 
 
 class EpochType(Enum):
@@ -75,51 +55,51 @@ class SupervisedTrainer:
         self.writer = writer
         self.logger = logger
 
-    def train(self, model: Model, train_data: Loader, valid_data: Loader) -> None:
+    def train(self, model: Model, train_data: DataLoader, valid_data: DataLoader) -> None:
         """
         Train the given model using the provided data loaders.
 
         :param model: The model to be trained.
         :type model: Model
         :param train_data: The DataLoader for the training data.
-        :type train_data: Loader
+        :type train_data: DataLoader
         :param valid_data: The DataLoader for the validation data.
-        :type valid_data: Loader
+        :type valid_data: DataLoader
         """
 
         for epoch in range(1, self.num_epochs + 1):
             self.train_epoch(model, train_data, epoch)
             self.validate_epoch(model, valid_data, epoch)
 
-    def train_epoch(self, model: Model, train_data: Loader, epoch: int = 0) -> None:
+    def train_epoch(self, model: Model, train_data: DataLoader, epoch: int = 0) -> None:
         """
         Train the model for one epoch.
 
         :param model: The model to be trained.
         :type model: Model
         :param train_data: The DataLoader for the training data.
-        :type train_data: Loader
+        :type train_data: DataLoader
         :param epoch: The current epoch number. Default is 0.
         :type epoch: int
         """
         epoch_type = EpochType.Train
         self._epoch(epoch_type, model, train_data, epoch)
 
-    def validate_epoch(self, model: Model, valid_data: Loader, epoch: int = 0) -> None:
+    def validate_epoch(self, model: Model, valid_data: DataLoader, epoch: int = 0) -> None:
         """
         Validate the model after an epoch of training.
 
         :param model: The model to be validated.
         :type model: Model
         :param valid_data: The DataLoader for the validation data.
-        :type valid_data: Loader
+        :type valid_data: DataLoader
         :param epoch: The current epoch number. Default is 0.
         :type epoch: int
         """
         epoch_type = EpochType.Validate
         self._epoch(epoch_type, model, valid_data, epoch)
 
-    def _epoch(self, epoch_type: EpochType, model: Model, data: Loader, epoch: int = 0) -> None:
+    def _epoch(self, epoch_type: EpochType, model: Model, data: DataLoader, epoch: int = 0) -> None:
         running_loss = 0.0
         running_metrics = {}
         for metric in self.metrics:
@@ -191,16 +171,16 @@ class RidgeRegression:
         self.metrics = metrics
         self.logger = logger
 
-    def train(self, model: QKernel, train_data: Loader, valid_data: Loader) -> None:
+    def train(self, model: QKernel, train_data: DataLoader, valid_data: DataLoader) -> None:
         """
         Train the given model using the provided data loaders using Ridge Regression.
 
         :param model: The quantum kernel model to be trained.
         :type model: QKernel
         :param train_data: The DataLoader for the training data.
-        :type train_data: Loader
+        :type train_data: DataLoader
         :param valid_data: The DataLoader for the validation data.
-        :type valid_data: Loader
+        :type valid_data: DataLoader
 
         .. warning::
             Training changes the state of the model by assigning `X_train`.

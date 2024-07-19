@@ -1,30 +1,19 @@
-# for python < 3.10
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing_extensions import TypeAlias
-
-import pennylane as qml
 import torch
 
-from .datagen import DataGenRademacher
+from .datagen import DataGenRademacher as Datagen
 from .loss import RademacherLoss
-from .trainer import SupervisedTrainer
-
-Model: TypeAlias = qml.QNode
-Tensor: TypeAlias = torch.Tensor
-Trainer: TypeAlias = SupervisedTrainer
-Datagen: TypeAlias = DataGenRademacher
+from .trainer import SupervisedTrainer as Trainer
+from .types import QModel, Tensor
 
 
 def rademacher(
-    model: Model, trainer: Trainer, X: Tensor, sigmas: Tensor, datagen: Datagen
+    model: QModel, trainer: Trainer, X: Tensor, sigmas: Tensor, datagen: Datagen
 ) -> Tensor:
     """
     Estimate Rademacher complexity of a given model.
 
     :param model: Prediction model.
-    :type model: Model
+    :type model: QModel
     :param trainer: The trainer.
     :type trainer: Trainer
     :param X: Data tensor of size (num_data_samples, size_data_set, dim_feature)

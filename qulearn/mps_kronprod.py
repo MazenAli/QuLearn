@@ -1,13 +1,7 @@
-# for python < 3.10
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing_extensions import TypeAlias
-
 import tntorch
 import torch
 
-MPS: TypeAlias = tntorch.tensor.Tensor
+from .types import MPS
 
 
 def kron(tleft: MPS, tright: MPS) -> MPS:

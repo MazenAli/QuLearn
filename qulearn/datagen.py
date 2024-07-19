@@ -1,29 +1,24 @@
-from typing import Dict, Generic, List, Optional, Set, Tuple, TypeVar
-
-# for python < 3.10
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing_extensions import TypeAlias
-
 from abc import ABC, abstractmethod
 from itertools import product
+from typing import Generic, Optional, Set, Tuple, TypeVar
 
 import numpy as np
 import torch
 from scipy.stats import qmc
-from torch.nn import Module
-from torch.utils.data import DataLoader, TensorDataset
 
-Tensor: TypeAlias = torch.Tensor
-Array: TypeAlias = np.ndarray
-Device: TypeAlias = torch.device
-DataOut: TypeAlias = Dict[str, Tensor]
-Loader: TypeAlias = DataLoader
-Model: TypeAlias = Module
-ParameterList: TypeAlias = List[List[Tensor]]
-CDevice: TypeAlias = torch.device
-DType: TypeAlias = torch.dtype
+from .types import (
+    Array,
+    CDevice,
+    DataLoader,
+    DataOut,
+    Device,
+    DType,
+    Model,
+    ParameterList,
+    Tensor,
+    TensorDataset,
+)
+
 D = TypeVar("D")
 L = TypeVar("L")
 
@@ -118,7 +113,7 @@ class PriorTorch(ABC, Generic[D]):
         pass
 
 
-class DataGenCapacity(DataGenTorch[DataOut, Loader]):
+class DataGenCapacity(DataGenTorch[DataOut, DataLoader]):
     """
     Generates data for memory capacity estimation.
 
@@ -175,7 +170,7 @@ class DataGenCapacity(DataGenTorch[DataOut, Loader]):
 
         return data
 
-    def data_to_loader(self, data: DataOut, s: int) -> Loader:
+    def data_to_loader(self, data: DataOut, s: int) -> DataLoader:
         """
         Convert data to pytorch loader.
 
@@ -183,7 +178,7 @@ class DataGenCapacity(DataGenTorch[DataOut, Loader]):
         :type data: DataOut
         :param s: Current label sample.
         :type s: int
-        :rtype: Loader
+        :rtype: DataLoader
         :raises ValueError: For invalid data or index s.
         """
         self._check_data(data)
@@ -223,7 +218,7 @@ class DataGenCapacity(DataGenTorch[DataOut, Loader]):
             raise ValueError(f"Y must be 3-dim (not {check})")
 
 
-class DataGenFat(DataGenTorch[DataOut, Loader]):
+class DataGenFat(DataGenTorch[DataOut, DataLoader]):
     """
     Generates data for estimating fat shattering dimension.
 
@@ -275,7 +270,7 @@ class DataGenFat(DataGenTorch[DataOut, Loader]):
 
         return data
 
-    def data_to_loader(self, data: DataOut, sr: int, sb: int) -> Loader:
+    def data_to_loader(self, data: DataOut, sr: int, sb: int) -> DataLoader:
         """
         Convert data to pytorch loader.
 
@@ -286,7 +281,7 @@ class DataGenFat(DataGenTorch[DataOut, Loader]):
         :param sb: Current b sample.
         :type sb: int
         :returns: Pytorch data loader.
-        :rtype: Loader
+        :rtype: DataLoader
         :raises ValueError: For invalid data or indeces sr or sb.
         """
         self._check_data(data)
@@ -329,7 +324,7 @@ class DataGenFat(DataGenTorch[DataOut, Loader]):
             raise ValueError(f"Y must be 4-dim (not {check})")
 
 
-class DataGenRademacher(DataGenTorch[DataOut, Loader]):
+class DataGenRademacher(DataGenTorch[DataOut, DataLoader]):
     """
     Generates uniform data for estimating the empirical Rademacher complexity.
 
@@ -385,7 +380,7 @@ class DataGenRademacher(DataGenTorch[DataOut, Loader]):
 
         return data
 
-    def data_to_loader(self, data: DataOut, s: int) -> Loader:
+    def data_to_loader(self, data: DataOut, s: int) -> DataLoader:
         """
         Convert data to pytorch loader.
 
@@ -394,7 +389,7 @@ class DataGenRademacher(DataGenTorch[DataOut, Loader]):
         :param s: Current sample.
         :type s: int
         :return: Pytorch data loader.
-        :rtype: Loader
+        :rtype: DataLoader
         :raises ValueError: For invalid data or index s.
         """
         self._check_data(data)

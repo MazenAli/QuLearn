@@ -1,9 +1,3 @@
-# for python < 3.10
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing_extensions import TypeAlias
-
 import math
 from typing import List
 
@@ -12,8 +6,7 @@ import torch
 
 from qulearn.hat_basis import HatBasis
 
-MPS: TypeAlias = tntorch.tensor.Tensor
-Tensor: TypeAlias = torch.Tensor
+from .types import MPS, Tensor
 
 
 class MPSQGates:

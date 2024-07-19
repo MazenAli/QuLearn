@@ -1,9 +1,9 @@
+import pennylane as qml
 import pytest
 import torch
-import pennylane as qml
 
-from qulearn.qlayer import HadamardLayer
 from qulearn.qkernel import QKernel
+from qulearn.qlayer import HadamardLayer
 
 DEFAULT_QDEV_CFG = {"name": "default.qubit", "wires": 2, "shots": None}
 

@@ -1,16 +1,18 @@
-import os
 import io
-import pytest
-import tempfile
-import torch
 import logging
-from torch.utils.tensorboard import SummaryWriter
-from torch.utils.data import DataLoader, TensorDataset
+import os
+import tempfile
+
+import pytest
+import torch
+from torch.nn import MSELoss
 from torch.optim import Adam
-from qulearn.trainer import SupervisedTrainer, RidgeRegression
+from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.tensorboard import SummaryWriter
+
 from qulearn.qkernel import QKernel
 from qulearn.qlayer import HadamardLayer, ParallelEntangledIQPEncoding
-from torch.nn import MSELoss
+from qulearn.trainer import RidgeRegression, SupervisedTrainer
 
 
 def test_trainer():
@@ -20,7 +22,7 @@ def test_trainer():
     X = torch.randn(N, d, dtype=torch.float64)
     A = torch.randn(d, 1, dtype=torch.float64)
     eps = torch.randn(N, 1, dtype=torch.float64) * 0.01
-    b = torch.randn(1, dtype=torch.float64)*torch.ones(N, 1, dtype=torch.float64)
+    b = torch.randn(1, dtype=torch.float64) * torch.ones(N, 1, dtype=torch.float64)
     Y = torch.matmul(X, A) + b + eps
 
     model = torch.nn.Linear(10, 1, bias=True, dtype=torch.float64)
@@ -161,6 +163,4 @@ def test_training_behavior():
     ), f"Loss did not decrease after training. Before: {loss_before}, After: {loss_after}"
 
     assert "Train - Metrics: mse_loss:" in logs, "Train logging missing or incorrect"
-    assert (
-        "Validate - Metrics: mse_loss:" in logs
-    ), "Validation logging missing or incorrect"
+    assert "Validate - Metrics: mse_loss:" in logs, "Validation logging missing or incorrect"

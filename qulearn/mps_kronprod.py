@@ -4,8 +4,8 @@ try:
 except ImportError:
     from typing_extensions import TypeAlias
 
-import torch
 import tntorch
+import torch
 
 MPS: TypeAlias = tntorch.tensor.Tensor
 

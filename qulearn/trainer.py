@@ -1,4 +1,4 @@
-from typing import Optional, Callable, Dict
+from typing import Callable, Dict, Optional
 
 # for python < 3.10
 try:
@@ -6,14 +6,14 @@ try:
 except ImportError:
     from typing_extensions import TypeAlias
 
+import logging
 from enum import Enum
 
-import logging
+import pennylane as qml
 import torch
 from torch import nn
-from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
-import pennylane as qml
+from torch.utils.tensorboard import SummaryWriter
 
 from .qkernel import QKernel
 
@@ -119,9 +119,7 @@ class SupervisedTrainer:
         epoch_type = EpochType.Validate
         self._epoch(epoch_type, model, valid_data, epoch)
 
-    def _epoch(
-        self, epoch_type: EpochType, model: Model, data: Loader, epoch: int = 0
-    ) -> None:
+    def _epoch(self, epoch_type: EpochType, model: Model, data: Loader, epoch: int = 0) -> None:
         running_loss = 0.0
         running_metrics = {}
         for metric in self.metrics:
@@ -154,15 +152,11 @@ class SupervisedTrainer:
         loss.backward()
         self.optimizer.step()
 
-    def _log_metrics(
-        self, phase: str, loss: float, metrics: Dict[str, float], epoch: int
-    ) -> None:
+    def _log_metrics(self, phase: str, loss: float, metrics: Dict[str, float], epoch: int) -> None:
         if self.writer is not None:
             self.writer.add_scalar(f"Loss/{phase}", loss, epoch)
             for metric_name, metric_value in metrics.items():
-                self.writer.add_scalar(
-                    f"Metrics/{phase}/{metric_name}", metric_value, epoch
-                )
+                self.writer.add_scalar(f"Metrics/{phase}/{metric_name}", metric_value, epoch)
 
         if self.logger is not None:
             metrics_strs = [
@@ -237,9 +231,7 @@ class RidgeRegression:
                 running_metrics[metric] = self.metrics[metric](predicted, labels)
         self._log_metrics(phase, running_metrics)
 
-    def kernel_ridge_regression(
-        self, model: QKernel, inputs: Tensor, labels: Tensor
-    ) -> Parameter:
+    def kernel_ridge_regression(self, model: QKernel, inputs: Tensor, labels: Tensor) -> Parameter:
         """
         Compute Ridge Regression solution for the given inputs and labels using the provided model.
 

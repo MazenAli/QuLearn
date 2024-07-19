@@ -1,11 +1,13 @@
+from typing import List
+
 import torch
 from torch.nn import Linear
 from torch.optim import Adam
-from typing import List
-from qulearn.qlayer import IQPEmbeddingLayer, RYCZLayer, HamiltonianLayer
-from qulearn.observable import parities_all_observables
-from qulearn.memory import memory, fit_rand_labels
+
 from qulearn.datagen import DataGenCapacity
+from qulearn.memory import fit_rand_labels, memory
+from qulearn.observable import parities_all_observables
+from qulearn.qlayer import HamiltonianLayer, IQPEmbeddingLayer, RYCZLayer
 from qulearn.trainer import SupervisedTrainer
 
 

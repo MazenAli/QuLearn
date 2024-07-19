@@ -1,12 +1,14 @@
+from collections import Counter
+
 import pennylane as qml
 import torch
-from collections import Counter
+
 from qulearn.utils import (
-    probabilities_to_dictionary,
-    samples_to_dictionary,
     all_bin_sequences,
     parities_outcome,
     parities_outcome_probs,
+    probabilities_to_dictionary,
+    samples_to_dictionary,
 )
 
 
@@ -24,9 +26,7 @@ def test_samples_to_dictionary():
 
 # all_bin_sequences
 def test_all_bin_sequences():
-    assert Counter(map(tuple, all_bin_sequences(2))) == Counter(
-        map(tuple, [[0, 1], [1], [0], []])
-    )
+    assert Counter(map(tuple, all_bin_sequences(2))) == Counter(map(tuple, [[0, 1], [1], [0], []]))
 
 
 # parities_outcome

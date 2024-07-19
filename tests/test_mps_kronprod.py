@@ -1,6 +1,7 @@
-import pytest
 import numpy as np
+import pytest
 import tntorch as tn
+
 from qulearn.mps_kronprod import kron, zkron
 
 
@@ -9,8 +10,8 @@ def tensor_to_vector(tensor):
 
 
 def test_kron():
-    t1 = tn.randn([2]*3)
-    t2 = tn.ones([2]*3)
+    t1 = tn.randn([2] * 3)
+    t2 = tn.ones([2] * 3)
     T1 = tensor_to_vector(t1)
     T2 = tensor_to_vector(t2)
 
@@ -24,8 +25,8 @@ def test_kron():
 
 
 def test_zkron():
-    t1 = tn.randn([2]*3)
-    t2 = tn.ones([2]*3)
+    t1 = tn.randn([2] * 3)
+    t2 = tn.ones([2] * 3)
 
     t4 = zkron(t1, t2)
     T4 = tensor_to_vector(t4)
@@ -41,8 +42,8 @@ def test_zkron():
 
 
 def test_core_length_mismatch():
-    t1 = tn.randn([2]*3)
-    t2 = tn.randn([2]*4)  # Different size to induce error
+    t1 = tn.randn([2] * 3)
+    t2 = tn.randn([2] * 4)  # Different size to induce error
 
     with pytest.raises(ValueError):
         zkron(t1, t2)

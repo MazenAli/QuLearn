@@ -4,11 +4,12 @@ try:
 except ImportError:
     from typing_extensions import TypeAlias
 
+import math
 from typing import List
 
-import math
-import torch
 import tntorch
+import torch
+
 from qulearn.hat_basis import HatBasis
 
 MPS: TypeAlias = tntorch.tensor.Tensor
@@ -154,9 +155,7 @@ class HatBasisMPS:
 
         num_qubits = math.log2(basis.num_nodes)
         if not num_qubits.is_integer():
-            raise ValueError(
-                f"Number of nodes ({basis.num_nodes}) " "must be a power of 2."
-            )
+            raise ValueError(f"Number of nodes ({basis.num_nodes}) " "must be a power of 2.")
 
         self.num_sites = int(num_qubits)
 

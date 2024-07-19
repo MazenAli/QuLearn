@@ -47,9 +47,7 @@ class HatBasis:
 
         within_range = torch.logical_not(torch.logical_or(left_of_a, right_of_b))
         position = torch.zeros_like(x)
-        position[within_range] = (
-            (x[within_range] - self.a) / self.segment_length
-        ).floor()
+        position[within_range] = ((x[within_range] - self.a) / self.segment_length).floor()
 
         position[left_of_a] = -1
         position[right_of_b] = -2

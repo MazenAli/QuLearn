@@ -1,4 +1,4 @@
-from typing import Optional, TypeVar, Generic, Tuple, Dict, Set, List
+from typing import Dict, Generic, List, Optional, Set, Tuple, TypeVar
 
 # for python < 3.10
 try:
@@ -7,12 +7,13 @@ except ImportError:
     from typing_extensions import TypeAlias
 
 from abc import ABC, abstractmethod
-import torch
-from torch.nn import Module
-from torch.utils.data import TensorDataset, DataLoader
-import numpy as np
 from itertools import product
+
+import numpy as np
+import torch
 from scipy.stats import qmc
+from torch.nn import Module
+from torch.utils.data import DataLoader, TensorDataset
 
 Tensor: TypeAlias = torch.Tensor
 Array: TypeAlias = np.ndarray
@@ -377,9 +378,7 @@ class DataGenRademacher(DataGenTorch[DataOut, Loader]):
 
         X = self.prior.gen_data(m * self.num_data_samples)
         X = torch.reshape(X, (self.num_data_samples, m, self.prior.sizex))
-        sigmas = gen_sigmas(
-            m=m * self.num_sigma_samples, seed=self.seed, device=self.device
-        )
+        sigmas = gen_sigmas(m=m * self.num_sigma_samples, seed=self.seed, device=self.device)
         sigmas = torch.reshape(sigmas, (self.num_sigma_samples, m))
 
         data = {"X": X, "sigmas": sigmas}
@@ -442,9 +441,7 @@ class UniformPrior(PriorTorch[Tensor]):
     :param kwargs: Keyword arguments passed to the base class.
     """
 
-    def __init__(
-        self, sizex: int, scale: float = 2.0, shift: float = -1.0, **kwargs
-    ) -> None:
+    def __init__(self, sizex: int, scale: float = 2.0, shift: float = -1.0, **kwargs) -> None:
         super().__init__(sizex, **kwargs)
 
         self.scale = scale
@@ -487,9 +484,7 @@ class NormalPrior(PriorTorch[Tensor]):
     :param kwargs: Keyword arguments passed to the base class.
     """
 
-    def __init__(
-        self, sizex: int, scale: float = 1.0, shift: float = 0.0, **kwargs
-    ) -> None:
+    def __init__(self, sizex: int, scale: float = 1.0, shift: float = 0.0, **kwargs) -> None:
         super().__init__(sizex, **kwargs)
 
         self.scale = scale
@@ -778,8 +773,7 @@ def gen_synthetic_labels_fat(
 
     if d1 != d2:
         raise ValueError(
-            f"The length of b[0] and r[0] are {d1} and {d2}. "
-            f"Should be constant and the same."
+            f"The length of b[0] and r[0] are {d1} and {d2}. " f"Should be constant and the same."
         )
 
     labels = np.zeros((Sr, Sb, d, 1))
@@ -796,9 +790,7 @@ def gen_synthetic_labels_fat(
     return y
 
 
-def gen_sigmas(
-    m: int, seed: Optional[int] = None, device: Device = torch.device("cpu")
-) -> Tensor:
+def gen_sigmas(m: int, seed: Optional[int] = None, device: Device = torch.device("cpu")) -> Tensor:
     """
     Random vector of +-1.
 
@@ -819,11 +811,7 @@ def gen_sigmas(
 
     generator = torch.manual_seed(seed_)
 
-    sigmas = (
-        torch.randint(2, (m,), device=device, requires_grad=False, generator=generator)
-        * 2
-        - 1
-    )
+    sigmas = torch.randint(2, (m,), device=device, requires_grad=False, generator=generator) * 2 - 1
 
     return sigmas
 
@@ -900,10 +888,7 @@ def generate_model_lhs_samples(
         )
         samples.append(sample_parameter.reshape((n_samples,) + p.shape))
     parameter_list = [
-        [
-            torch.tensor(samples[j][i], device=device, dtype=dtype)
-            for j in range(len(samples))
-        ]
+        [torch.tensor(samples[j][i], device=device, dtype=dtype) for j in range(len(samples))]
         for i in range(n_samples)
     ]
 

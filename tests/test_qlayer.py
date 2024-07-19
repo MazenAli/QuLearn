@@ -1,26 +1,26 @@
-import torch
-import pytest
 import pennylane as qml
-from qulearn.qlayer import (
-    MeasurementType,
-    CircuitLayer,
-    MeasurementLayer,
-    IQPEmbeddingLayer,
-    HatBasisQFE,
-    Linear2DBasisQFE,
-    TwoQubitRotCXMPSLayer,
-    EmbedU,
-    RYCZLayer,
-    AltRotCXLayer,
-    IQPERYCZLayer,
-    IQPEAltRotCXLayer,
-    HamiltonianLayer,
-    HadamardLayer,
-    ParallelIQPEncoding,
-    ParallelEntangledIQPEncoding,
-)
-from qulearn.hat_basis import HatBasis
+import pytest
+import torch
 
+from qulearn.hat_basis import HatBasis
+from qulearn.qlayer import (
+    AltRotCXLayer,
+    CircuitLayer,
+    EmbedU,
+    HadamardLayer,
+    HamiltonianLayer,
+    HatBasisQFE,
+    IQPEAltRotCXLayer,
+    IQPEmbeddingLayer,
+    IQPERYCZLayer,
+    Linear2DBasisQFE,
+    MeasurementLayer,
+    MeasurementType,
+    ParallelEntangledIQPEncoding,
+    ParallelIQPEncoding,
+    RYCZLayer,
+    TwoQubitRotCXMPSLayer,
+)
 
 # Unit tests for CircuitLayer class
 
@@ -302,9 +302,7 @@ def test_hadamard_layer():
         return qml.probs(wires=wires)
 
     probs = circuit()
-    assert 0.125 == pytest.approx(
-        probs
-    )  # Should be equal probabilities for all 8 states
+    assert 0.125 == pytest.approx(probs)  # Should be equal probabilities for all 8 states
 
 
 def test_parallel_iqp_encoding():
@@ -441,9 +439,7 @@ def sample_hat_basis():
 
 
 def test_hat_basis_qfe_initialization(sample_hat_basis):
-    hat_basis_qfe = HatBasisQFE(
-        wires=2, basis=sample_hat_basis, sqrt=True, normalize=True
-    )
+    hat_basis_qfe = HatBasisQFE(wires=2, basis=sample_hat_basis, sqrt=True, normalize=True)
     assert hat_basis_qfe.sqrt is True
     assert hat_basis_qfe.normalize is True
 

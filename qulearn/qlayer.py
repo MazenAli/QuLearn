@@ -4,13 +4,13 @@ try:
 except ImportError:
     from typing_extensions import TypeAlias
 
-from typing import Iterable, Any, Optional, Union, Dict
-
-from enum import Enum
 import math
+from enum import Enum
+from typing import Any, Dict, Iterable, Optional, Union
+
+import pennylane as qml
 import torch
 from torch import nn
-import pennylane as qml
 
 from .hat_basis import HatBasis
 from .mps import HatBasisMPS, MPSQGates
@@ -26,9 +26,7 @@ Tensor: TypeAlias = torch.Tensor
 Wires: TypeAlias = Union[int, Iterable[Any]]
 Expectation: TypeAlias = qml.measurements.ExpectationMP
 Observable: TypeAlias = qml.operation.Observable
-Observables: TypeAlias = Union[
-    qml.operation.Observable, Iterable[qml.operation.Observable]
-]
+Observables: TypeAlias = Union[qml.operation.Observable, Iterable[qml.operation.Observable]]
 Probability: TypeAlias = qml.measurements.ProbabilityMP
 Sample: TypeAlias = qml.measurements.SampleMP
 Entropy: TypeAlias = qml.measurements.VnEntropyMP
@@ -190,9 +188,7 @@ class HatBasisQFE(CircuitLayer):
         N = len(Us)
         count = 0
         for k in range(N - 1, -1, -1):
-            wires_idx = list(
-                range(self.num_wires - count - s - 1, self.num_wires - count)
-            )
+            wires_idx = list(range(self.num_wires - count - s - 1, self.num_wires - count))
             subwires = [self.wires[idx] for idx in wires_idx]
             qml.QubitUnitary(Us[k], wires=subwires, unitary_check=False)
 
@@ -241,12 +237,12 @@ class Linear2DBasisQFE(CircuitLayer):
     """
 
     def __init__(
-            self,
-            wires: Wires,
-            basis: HatBasis,
-            sqrt: bool = False,
-            normalize: bool = False,
-            zorder: bool = False,
+        self,
+        wires: Wires,
+        basis: HatBasis,
+        sqrt: bool = False,
+        normalize: bool = False,
+        zorder: bool = False,
     ) -> None:
         super().__init__(wires)
         self.basis = basis
@@ -288,15 +284,15 @@ class Linear2DBasisQFE(CircuitLayer):
         val2 = a1 * b2
         val3 = a2 * b1
         val4 = a2 * b2
-        self.norm = torch.sqrt(val1 ** 2 + val2 ** 2 + val3 ** 2 + val4 ** 2)
+        norm = torch.sqrt(val1**2 + val2**2 + val3**2 + val4**2)
 
         if self.normalize:
-            a1 /= torch.sqrt(self.norm)
-            b1 /= torch.sqrt(self.norm)
-            a2 /= torch.sqrt(self.norm)
-            b2 /= torch.sqrt(self.norm)
+            a1 /= torch.sqrt(norm)
+            b1 /= torch.sqrt(norm)
+            a2 /= torch.sqrt(norm)
+            b2 /= torch.sqrt(norm)
 
-        self.norm = self.norm.item()
+        self.norm = norm.item()
 
         # for compatibility (TODO: remove)
         first1 = a1.item()
@@ -322,9 +318,7 @@ class Linear2DBasisQFE(CircuitLayer):
         N = len(Us)
         count = 0
         for k in range(N - 1, -1, -1):
-            wires_idx = list(
-                range(self.num_wires - count - s - 1, self.num_wires - count)
-            )
+            wires_idx = list(range(self.num_wires - count - s - 1, self.num_wires - count))
             subwires = [self.wires[idx] for idx in wires_idx]
             qml.QubitUnitary(Us[k], wires=subwires, unitary_check=False)
 
@@ -359,7 +353,7 @@ class Linear2DBasisQFE(CircuitLayer):
         val2 = a1 * b2
         val3 = a2 * b1
         val4 = a2 * b2
-        self.norm = torch.sqrt(val1 ** 2 + val2 ** 2 + val3 ** 2 + val4 ** 2).item()
+        self.norm = torch.sqrt(val1**2 + val2**2 + val3**2 + val4**2).item()
 
         return self.norm
 
@@ -665,9 +659,7 @@ class IQPERYCZLayer(CircuitLayer):
             num_var_repeats = self.num_varlayers
 
         for _ in range(self.num_repeat):
-            embed_layer = IQPEmbeddingLayer(
-                self.wires, self.num_uploads, **self.iqpe_opts
-            )
+            embed_layer = IQPEmbeddingLayer(self.wires, self.num_uploads, **self.iqpe_opts)
 
             var_layers = []
             for _ in range(num_var_repeats):
@@ -751,9 +743,7 @@ class IQPEAltRotCXLayer(CircuitLayer):
         self.blocks = nn.ModuleList()
 
         for _ in range(self.num_repeat):
-            embed_layer = IQPEmbeddingLayer(
-                self.wires, self.num_uploads, **self.iqpe_opts
-            )
+            embed_layer = IQPEmbeddingLayer(self.wires, self.num_uploads, **self.iqpe_opts)
             var_layer = AltRotCXLayer(
                 self.wires,
                 self.num_varlayers,
@@ -867,7 +857,7 @@ class ParallelIQPEncoding(CircuitLayer):
             x_ = self.base ** (freq * self.omega) * x
             self.qfunc(
                 x_,
-                self.wires[i: i + num_features],
+                self.wires[i : i + num_features],
                 self.n_repeat,
                 **self.kwargs,
             )
@@ -1012,9 +1002,7 @@ class TwoQubitRotCXMPSLayer(CircuitLayer):
 
         for mps_layer_idx in range(self.n_layers_mps):
             for block_idx in (
-                range(self.n_blocks - 1, -1, -1)
-                if self.reverse
-                else range(self.n_blocks)
+                range(self.n_blocks - 1, -1, -1) if self.reverse else range(self.n_blocks)
             ):
                 self._block(mps_layer_idx, block_idx)
 
@@ -1247,22 +1235,15 @@ class MeasurementLayer(nn.Module):
         """
 
         if not isinstance(self.measurement_type, MeasurementType):
-            raise NotImplementedError(
-                f"Measurement type ({self.measurement_type}) not recognized"
-            )
+            raise NotImplementedError(f"Measurement type ({self.measurement_type}) not recognized")
         if self.measurement_type == MeasurementType.Expectation:
             if self.observables is None:
                 raise ValueError(
-                    f"Measurement type ({self.measurement_type}) "
-                    "requires an observable"
+                    f"Measurement type ({self.measurement_type}) " "requires an observable"
                 )
-        if (
-            self.measurement_type == MeasurementType.Samples
-            and self.qdevice.shots is None
-        ):
+        if self.measurement_type == MeasurementType.Samples and self.qdevice.shots is None:
             raise ValueError(
-                f"Measurement type ({self.measurement_type}) "
-                "requires integer number of shots"
+                f"Measurement type ({self.measurement_type}) " "requires integer number of shots"
             )
 
 

@@ -7,12 +7,13 @@ except ImportError:
     from typing_extensions import TypeAlias
 
 import logging
+
+import numpy as np
 import torch
 from torch.nn import Module
-import numpy as np
 
-from .trainer import SupervisedTrainer
 from .datagen import DataGenCapacity
+from .trainer import SupervisedTrainer
 
 Tensor: TypeAlias = torch.Tensor
 Model: TypeAlias = Module

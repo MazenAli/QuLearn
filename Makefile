@@ -10,19 +10,21 @@ BUILDDIR      = build
 # Default target executed when no arguments are given to make.
 default: all
 
-all: help format static test
+all: format format_check static docs-html test test_coverage
 
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-# Code formatting and static analysis
+docs-%:
+	@$(SPHINXBUILD) -M $* "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
 format:
-	black --line-length 100 .
-	isort --multi-line 3 --trailing-comma --force-grid-wrap 0 --use-parentheses --line-width 100 .
+	black --line-length 100 qulearn tests
+	isort --multi-line 3 --trailing-comma --force-grid-wrap 0 --use-parentheses --line-width 100 qulearn tests
 
 format_check:
-	black --line-length 100 --check .
-	isort --multi-line 3 --trailing-comma --force-grid-wrap 0 --use-parentheses --line-width 100 . --check-only
+	black --line-length 100 --check qulearn tests
+	isort --multi-line 3 --trailing-comma --force-grid-wrap 0 --use-parentheses --line-width 100 qulearn tests --check-only
 
 static:
 	flake8 qulearn tests
@@ -35,4 +37,4 @@ test:
 test_coverage:
 	coverage run --source=qulearn --module pytest -v tests/ && coverage report -m
 
-.PHONY: help format format_check static test test_coverage
+.PHONY: help docs-% format format_check static test test_coverage

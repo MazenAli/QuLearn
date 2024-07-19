@@ -5,8 +5,9 @@ except ImportError:
     from typing_extensions import TypeAlias
 
 import logging
-import torch
+
 import pennylane as qml
+import torch
 
 from .datagen import DataGenFat
 from .trainer import SupervisedTrainer

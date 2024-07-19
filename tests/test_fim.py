@@ -1,24 +1,24 @@
-import pytest
 import math
-import torch
+
 import numpy as np
+import pytest
+import torch
+
 from qulearn.fim import (
-    empirical_fim,
-    compute_fims,
-    mc_integrate_fim_trace,
-    norm_const_fim,
-    const_effdim,
-    half_log_det,
-    mc_integrate_fims_effdim,
     compute_effdim,
+    compute_fims,
+    const_effdim,
+    empirical_fim,
+    half_log_det,
+    mc_integrate_fim_trace,
+    mc_integrate_fims_effdim,
+    norm_const_fim,
 )
 
 
 @pytest.fixture
 def model():
-    model = torch.nn.Sequential(
-        torch.nn.Linear(1, 2, bias=False), torch.nn.Softmax(dim=1)
-    )
+    model = torch.nn.Sequential(torch.nn.Linear(1, 2, bias=False), torch.nn.Softmax(dim=1))
     # Manually set weights to known values
     model[0].weight.data = torch.tensor([[1.0], [1.0]])
     num_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -144,9 +144,7 @@ def test_norm_const():
 
 @pytest.fixture
 def setup_effdim():
-    model = torch.nn.Sequential(
-        torch.nn.Linear(1, 2, bias=False), torch.nn.Softmax(dim=1)
-    )
+    model = torch.nn.Sequential(torch.nn.Linear(1, 2, bias=False), torch.nn.Softmax(dim=1))
     model[0].weight.data = torch.tensor([[1.0], [1.0]])
 
     X = torch.tensor([[1.0], [2.0]])
@@ -160,9 +158,7 @@ def setup_effdim():
 @pytest.fixture
 def setup_effdim2():
     dim = 3
-    model = torch.nn.Sequential(
-        torch.nn.Linear(dim, 5, bias=True), torch.nn.Softmax(dim=1)
-    )
+    model = torch.nn.Sequential(torch.nn.Linear(dim, 5, bias=True), torch.nn.Softmax(dim=1))
 
     n = 50
     X = torch.randn((n, dim))
@@ -176,9 +172,7 @@ def setup_effdim2():
 def test_comp_effdim(setup_effdim):
     effdim = compute_effdim(*setup_effdim)
 
-    num_parameters = sum(
-        p.numel() for p in setup_effdim[0].parameters() if p.requires_grad
-    )
+    num_parameters = sum(p.numel() for p in setup_effdim[0].parameters() if p.requires_grad)
     X = setup_effdim[1]
     diag = 0.25 * X[0][0] ** 2 + 0.25 * X[1][0] ** 2
     diag *= 0.5
@@ -188,9 +182,7 @@ def test_comp_effdim(setup_effdim):
     normconst = setup_effdim[4] * num_parameters / traceint
     n = len(X)
     const = setup_effdim[5] * n / (2 * math.pi * math.log(n))
-    sqrtdet = math.sqrt(
-        torch.det(torch.eye(num_parameters) + const * normconst * expected_fim)
-    )
+    sqrtdet = math.sqrt(torch.det(torch.eye(num_parameters) + const * normconst * expected_fim))
 
     dgamma = 2 * math.log(sqrtdet) / math.log(const)
 

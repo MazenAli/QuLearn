@@ -4,8 +4,8 @@ try:
 except ImportError:
     from typing_extensions import TypeAlias
 
-import torch
 import pennylane as qml
+import torch
 
 from .datagen import DataGenRademacher
 from .loss import RademacherLoss

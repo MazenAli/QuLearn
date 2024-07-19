@@ -1,10 +1,12 @@
-import pytest
 from itertools import combinations
-import torch
+
 import pennylane as qml
+import pytest
+import torch
+
 from qulearn.observable import (
-    parity_all_hamiltonian,
     parities_all_observables,
+    parity_all_hamiltonian,
     sequence2parity_observable,
 )
 

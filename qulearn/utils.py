@@ -8,8 +8,9 @@ try:
 except ImportError:
     from typing_extensions import TypeAlias
 
-from itertools import chain, combinations
 import math
+from itertools import chain, combinations
+
 import pennylane as qml
 import torch
 
@@ -96,8 +97,7 @@ def parities_outcome(bitstring: str, H: Observable) -> float:
 
     if num_qubits != num_wires:
         raise ValueError(
-            f"Number of qubits ({num_qubits}) "
-            f"does not match number of wires ({num_wires})"
+            f"Number of qubits ({num_qubits}) " f"does not match number of wires ({num_wires})"
         )
 
     sum = 0.0
@@ -125,9 +125,7 @@ def parities_outcome(bitstring: str, H: Observable) -> float:
     return sum
 
 
-def parities_outcome_probs(
-    probs: Dict[str, float], H: Observable
-) -> Dict[float, float]:
+def parities_outcome_probs(probs: Dict[str, float], H: Observable) -> Dict[float, float]:
     """
     Compute (real-valued) outputs with corresponding probabilities.
 

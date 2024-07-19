@@ -1,4 +1,4 @@
-from typing import List, Tuple, Sequence
+from typing import List, Sequence, Tuple
 
 # for python < 3.10
 try:
@@ -7,8 +7,9 @@ except ImportError:
     from typing_extensions import TypeAlias
 
 import math
-import torch
+
 import pennylane as qml
+import torch
 
 from .utils import all_bin_sequences
 

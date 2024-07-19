@@ -1,23 +1,20 @@
 import pytest
-import torch
 import tntorch
+import torch
+
+from qulearn.hat_basis import HatBasis
 from qulearn.mps import (
-    MPSQGates,
     HatBasisMPS,
+    MPSQGates,
     compute_max_rank_power,
     embed2unitary,
     zerobit_position_odd,
 )
-from qulearn.hat_basis import HatBasis
 
 
 @pytest.fixture
 def sample_mps():
-    cores = (
-        [torch.rand(1, 2, 2)]
-        + [torch.rand(2, 2, 2) for _ in range(2)]
-        + [torch.rand(2, 2, 1)]
-    )
+    cores = [torch.rand(1, 2, 2)] + [torch.rand(2, 2, 2) for _ in range(2)] + [torch.rand(2, 2, 1)]
     mps = tntorch.Tensor(cores)
     return mps
 

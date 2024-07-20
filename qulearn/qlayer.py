@@ -1,36 +1,30 @@
-# for python < 3.10
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing_extensions import TypeAlias
-
-from typing import Iterable, Any, Optional, Union, Dict
-
-from enum import Enum
 import math
+from enum import Enum
+from typing import Dict, Iterable, Optional
+
+import pennylane as qml
 import torch
 from torch import nn
-import pennylane as qml
 
 from .hat_basis import HatBasis
 from .mps import HatBasisMPS, MPSQGates
+from .mps_kronprod import kron, zkron
+from .types import (
+    CDevice,
+    DType,
+    Entropy,
+    Expectation,
+    Observable,
+    Observables,
+    Probability,
+    QDevice,
+    QNode,
+    Sample,
+    Tensor,
+    Wires,
+)
 
 DEFAULT_QDEV_CFG = {"name": "default.qubit", "shots": None}
-
-QDevice: TypeAlias = qml.Device
-CDevice: TypeAlias = torch.device
-DType: TypeAlias = torch.dtype
-QNode: TypeAlias = qml.QNode
-Tensor: TypeAlias = torch.Tensor
-Wires: TypeAlias = Union[int, Iterable[Any]]
-Expectation: TypeAlias = qml.measurements.ExpectationMP
-Observable: TypeAlias = qml.operation.Observable
-Observables: TypeAlias = Union[
-    qml.operation.Observable, Iterable[qml.operation.Observable]
-]
-Probability: TypeAlias = qml.measurements.ProbabilityMP
-Sample: TypeAlias = qml.measurements.SampleMP
-Entropy: TypeAlias = qml.measurements.VnEntropyMP
 
 
 class MeasurementType(Enum):
@@ -189,9 +183,7 @@ class HatBasisQFE(CircuitLayer):
         N = len(Us)
         count = 0
         for k in range(N - 1, -1, -1):
-            wires_idx = list(
-                range(self.num_wires - count - s - 1, self.num_wires - count)
-            )
+            wires_idx = list(range(self.num_wires - count - s - 1, self.num_wires - count))
             subwires = [self.wires[idx] for idx in wires_idx]
             qml.QubitUnitary(Us[k], wires=subwires, unitary_check=False)
 
@@ -223,6 +215,149 @@ class HatBasisQFE(CircuitLayer):
 
         self.norm = torch.sqrt(a**2 + b**2).item()
         return self.norm
+
+
+class Linear2DBasisQFE(CircuitLayer):
+    """
+    Layer for the 2D hat basis quantum feature embedding.
+
+    :param basis: The 1D hat basis class.
+    :type basis: HatBasis
+    :param wires: The wires to be used by the layer
+    :type wires: Wires
+    :param sqrt: Set flag to take square roots before applying hat basis.
+    :type sqrt: bool
+    :param normalize: Set flag to normalize basis vector before embedding.
+    :type normalize: bool
+    """
+
+    def __init__(
+        self,
+        wires: Wires,
+        basis: HatBasis,
+        sqrt: bool = False,
+        normalize: bool = False,
+        zorder: bool = False,
+    ) -> None:
+        super().__init__(wires)
+        self.basis = basis
+        self.sqrt = sqrt
+        self.normalize = normalize
+        self.norm = 1.0
+        self.hbmps = HatBasisMPS(basis)
+        self.zorder = zorder
+        self.mps = None
+        self.mps1 = None
+        self.mps2 = None
+
+    def circuit(self, x: Tensor) -> None:
+        """
+        Define the quantum circuit for this layer.
+
+        :param x: Input tensor that is passed to the quantum circuit.
+        :type x: Tensor
+        """
+        self._check_input(x)
+
+        x1 = x[0]
+        x2 = x[1]
+        position1 = int(self.basis.position(x1))
+        position2 = int(self.basis.position(x2))
+        a1, b1 = self.basis.nonz_vals(x1)
+        a2, b2 = self.basis.nonz_vals(x2)
+
+        if self.sqrt:
+            # sometimes the values are close to 0 and negative
+            a1 = torch.sqrt(torch.abs(a1))
+            b1 = torch.sqrt(torch.abs(b1))
+            a2 = torch.sqrt(torch.abs(a2))
+            b2 = torch.sqrt(torch.abs(b2))
+
+        # TODO: cover the case where x or y are outside of bounds
+
+        val1 = a1 * a2
+        val2 = a1 * b2
+        val3 = a2 * b1
+        val4 = a2 * b2
+        norm = torch.sqrt(val1**2 + val2**2 + val3**2 + val4**2)
+
+        if self.normalize:
+            a1 /= torch.sqrt(norm)
+            b1 /= torch.sqrt(norm)
+            a2 /= torch.sqrt(norm)
+            b2 /= torch.sqrt(norm)
+
+        self.norm = norm.item()
+
+        # for compatibility (TODO: remove)
+        first1 = a1.item()
+        second1 = b1.item()
+        first2 = a2.item()
+        second2 = b2.item()
+
+        mps1 = self.hbmps.mps_hatbasis(first1, second1, position1)
+        mps2 = self.hbmps.mps_hatbasis(first2, second2, position2)
+
+        if self.zorder:
+            mps = zkron(mps2, mps1)
+        else:
+            mps = kron(mps2, mps1)
+
+        self.mps1 = mps1
+        self.mps2 = mps2
+        self.mps = mps
+        mpsgates = MPSQGates(mps)
+
+        s = mpsgates.max_rank_power
+        Us = mpsgates.qgates()
+        N = len(Us)
+        count = 0
+        for k in range(N - 1, -1, -1):
+            wires_idx = list(range(self.num_wires - count - s - 1, self.num_wires - count))
+            subwires = [self.wires[idx] for idx in wires_idx]
+            qml.QubitUnitary(Us[k], wires=subwires, unitary_check=False)
+
+            count += 1
+
+    def compute_norm(self, x: Tensor) -> float:
+        """
+        Compute the norm of the basis vector for the given input x.
+
+        :param x: Input tensor that is passed to basis vector.
+        :type x: Tensor
+        :returns: The norm.
+        :rtype: float
+        """
+        self._check_input(x)
+
+        x1 = x[0]
+        x2 = x[1]
+        a1, b1 = self.basis.nonz_vals(x1)
+        a2, b2 = self.basis.nonz_vals(x2)
+
+        if self.sqrt:
+            # sometimes the values are close to 0 and negative
+            a1 = torch.sqrt(torch.abs(a1))
+            b1 = torch.sqrt(torch.abs(b1))
+            a2 = torch.sqrt(torch.abs(a2))
+            b2 = torch.sqrt(torch.abs(b2))
+
+        # TODO: cover the case where x or y are outside of bounds
+
+        val1 = a1 * a2
+        val2 = a1 * b2
+        val3 = a2 * b1
+        val4 = a2 * b2
+        self.norm = torch.sqrt(val1**2 + val2**2 + val3**2 + val4**2).item()
+
+        return self.norm
+
+    def _check_input(self, x: Tensor):
+        if x.dim() > 2:
+            raise ValueError("Input tensor must have 2 dimensions")
+
+        if torch.any(torch.abs(x) >= 1):
+            raise ValueError("Out of bounds case is not implemented")
 
 
 class RYCZLayer(CircuitLayer):
@@ -519,9 +654,7 @@ class IQPERYCZLayer(CircuitLayer):
             num_var_repeats = self.num_varlayers
 
         for _ in range(self.num_repeat):
-            embed_layer = IQPEmbeddingLayer(
-                self.wires, self.num_uploads, **self.iqpe_opts
-            )
+            embed_layer = IQPEmbeddingLayer(self.wires, self.num_uploads, **self.iqpe_opts)
 
             var_layers = []
             for _ in range(num_var_repeats):
@@ -605,9 +738,7 @@ class IQPEAltRotCXLayer(CircuitLayer):
         self.blocks = nn.ModuleList()
 
         for _ in range(self.num_repeat):
-            embed_layer = IQPEmbeddingLayer(
-                self.wires, self.num_uploads, **self.iqpe_opts
-            )
+            embed_layer = IQPEmbeddingLayer(self.wires, self.num_uploads, **self.iqpe_opts)
             var_layer = AltRotCXLayer(
                 self.wires,
                 self.num_varlayers,
@@ -693,11 +824,13 @@ class ParallelIQPEncoding(CircuitLayer):
 
         if not self.num_wires >= self.num_features:
             raise ValueError(
-                f"The number of wires ({self.num_wires}) must be greater than or equal to the number of features ({self.num_features})."
+                f"The number of wires ({self.num_wires}) "
+                f"must be greater than or equal to the number of features ({self.num_features})."
             )
         if not self.num_wires % self.num_features == 0:
             raise ValueError(
-                f"The number of wires ({self.num_wires}) must be a multiple of the number of features ({self.num_features})."
+                f"The number of wires ({self.num_wires}) "
+                f"must be a multiple of the number of features ({self.num_features})."
             )
 
     def circuit(self, x: Tensor) -> None:
@@ -710,7 +843,8 @@ class ParallelIQPEncoding(CircuitLayer):
         num_features = x.shape[-1]
         if num_features != self.num_features:
             raise ValueError(
-                f"Input tensor last dimension ({num_features}) must be equal to the number of features ({self.num_features})."
+                f"Input tensor last dimension ({num_features}) "
+                f"must be equal to the number of features ({self.num_features})."
             )
 
         freq = 0
@@ -765,11 +899,13 @@ class ParallelEntangledIQPEncoding(CircuitLayer):
 
         if not self.num_wires >= self.num_features:
             raise ValueError(
-                f"The number of wires ({self.num_wires}) must be greater than or equal to the number of features ({self.num_features})."
+                f"The number of wires ({self.num_wires}) "
+                f"must be greater than or equal to the number of features ({self.num_features})."
             )
         if not self.num_wires % self.num_features == 0:
             raise ValueError(
-                f"The number of wires ({self.num_wires}) must be a multiple of the number of features ({self.num_features})."
+                f"The number of wires ({self.num_wires}) "
+                f"must be a multiple of the number of features ({self.num_features})."
             )
 
     def circuit(self, x: Tensor) -> None:
@@ -782,7 +918,8 @@ class ParallelEntangledIQPEncoding(CircuitLayer):
         num_features = x.shape[-1]
         if num_features != self.num_features:
             raise ValueError(
-                f"Input tensor last dimension ({num_features}) must be equal to the number of features ({self.num_features})."
+                f"Input tensor last dimension ({num_features}) "
+                f"must be equal to the number of features ({self.num_features})."
             )
 
         num_repeats = int(self.num_wires / num_features)
@@ -860,9 +997,7 @@ class TwoQubitRotCXMPSLayer(CircuitLayer):
 
         for mps_layer_idx in range(self.n_layers_mps):
             for block_idx in (
-                range(self.n_blocks - 1, -1, -1)
-                if self.reverse
-                else range(self.n_blocks)
+                range(self.n_blocks - 1, -1, -1) if self.reverse else range(self.n_blocks)
             ):
                 self._block(mps_layer_idx, block_idx)
 
@@ -1095,22 +1230,15 @@ class MeasurementLayer(nn.Module):
         """
 
         if not isinstance(self.measurement_type, MeasurementType):
-            raise NotImplementedError(
-                f"Measurement type ({self.measurement_type}) not recognized"
-            )
+            raise NotImplementedError(f"Measurement type ({self.measurement_type}) not recognized")
         if self.measurement_type == MeasurementType.Expectation:
             if self.observables is None:
                 raise ValueError(
-                    f"Measurement type ({self.measurement_type}) "
-                    "requires an observable"
+                    f"Measurement type ({self.measurement_type}) " "requires an observable"
                 )
-        if (
-            self.measurement_type == MeasurementType.Samples
-            and self.qdevice.shots is None
-        ):
+        if self.measurement_type == MeasurementType.Samples and self.qdevice.shots is None:
             raise ValueError(
-                f"Measurement type ({self.measurement_type}) "
-                "requires integer number of shots"
+                f"Measurement type ({self.measurement_type}) " "requires integer number of shots"
             )
 
 

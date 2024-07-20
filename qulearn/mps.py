@@ -1,18 +1,12 @@
-# for python < 3.10
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing_extensions import TypeAlias
-
+import math
 from typing import List
 
-import math
-import torch
 import tntorch
+import torch
+
 from qulearn.hat_basis import HatBasis
 
-MPS: TypeAlias = tntorch.tensor.Tensor
-Tensor: TypeAlias = torch.Tensor
+from .types import MPS, Tensor
 
 
 class MPSQGates:
@@ -105,7 +99,8 @@ class MPSQGates:
 
     def left_core_reshape(self, core: Tensor) -> Tensor:
         """
-        Reshapes a core tensor for the left-most core, preparing it for SVD and embedding into a unitary matrix.
+        Reshapes a core tensor for the left-most core,
+        preparing it for SVD and embedding into a unitary matrix.
 
         :param core: The core tensor to reshape.
         :type core: Tensor
@@ -136,14 +131,16 @@ class MPSQGates:
 
 class HatBasisMPS:
     """
-    Generates Matrix Product States (MPS) corresponding to evaluations of linear hat basis functions.
+    Generates Matrix Product States (MPS) corresponding to evaluations
+    of linear hat basis functions.
 
     :param basis: The hat basis to use for generating the MPS.
     :type basis: HatBasis
 
     .. note::
-       The number of nodes in the hat basis must be a power of 2, corresponding to the number of qubits used.
-       Currently works only for scalar inputs x.
+       The number of nodes in the hat basis must be a power of 2,
+       corresponding to the number of qubits used.
+       Currently, works only for scalar inputs x.
     """
 
     def __init__(self, basis: HatBasis) -> None:
@@ -151,9 +148,7 @@ class HatBasisMPS:
 
         num_qubits = math.log2(basis.num_nodes)
         if not num_qubits.is_integer():
-            raise ValueError(
-                f"Number of nodes ({basis.num_nodes}) " "must be a power of 2."
-            )
+            raise ValueError(f"Number of nodes ({basis.num_nodes}) " "must be a power of 2.")
 
         self.num_sites = int(num_qubits)
 
@@ -193,7 +188,7 @@ class HatBasisMPS:
 
     def mps_hatbasis(self, first: float, second: float, idx: int) -> MPS:
         """
-        Generates an MPS the hat basis vector.
+        Generates an MPS for the hat basis vector.
 
         :param first: The first non-zero value in the hat basis function.
         :type first: float

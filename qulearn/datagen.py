@@ -1,28 +1,24 @@
-from typing import Optional, TypeVar, Generic, Tuple, Dict, Set, List
-
-# for python < 3.10
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing_extensions import TypeAlias
-
 from abc import ABC, abstractmethod
-import torch
-from torch.nn import Module
-from torch.utils.data import TensorDataset, DataLoader
-import numpy as np
 from itertools import product
+from typing import Generic, Optional, Set, Tuple, TypeVar
+
+import numpy as np
+import torch
 from scipy.stats import qmc
 
-Tensor: TypeAlias = torch.Tensor
-Array: TypeAlias = np.ndarray
-Device: TypeAlias = torch.device
-DataOut: TypeAlias = Dict[str, Tensor]
-Loader: TypeAlias = DataLoader
-Model: TypeAlias = Module
-ParameterList: TypeAlias = List[List[Tensor]]
-CDevice: TypeAlias = torch.device
-DType: TypeAlias = torch.dtype
+from .types import (
+    Array,
+    CDevice,
+    DataLoader,
+    DataOut,
+    Device,
+    DType,
+    Model,
+    ParameterList,
+    Tensor,
+    TensorDataset,
+)
+
 D = TypeVar("D")
 L = TypeVar("L")
 
@@ -117,7 +113,7 @@ class PriorTorch(ABC, Generic[D]):
         pass
 
 
-class DataGenCapacity(DataGenTorch[DataOut, Loader]):
+class DataGenCapacity(DataGenTorch[DataOut, DataLoader]):
     """
     Generates data for memory capacity estimation.
 
@@ -174,7 +170,7 @@ class DataGenCapacity(DataGenTorch[DataOut, Loader]):
 
         return data
 
-    def data_to_loader(self, data: DataOut, s: int) -> Loader:
+    def data_to_loader(self, data: DataOut, s: int) -> DataLoader:
         """
         Convert data to pytorch loader.
 
@@ -182,7 +178,7 @@ class DataGenCapacity(DataGenTorch[DataOut, Loader]):
         :type data: DataOut
         :param s: Current label sample.
         :type s: int
-        :rtype: Loader
+        :rtype: DataLoader
         :raises ValueError: For invalid data or index s.
         """
         self._check_data(data)
@@ -222,7 +218,7 @@ class DataGenCapacity(DataGenTorch[DataOut, Loader]):
             raise ValueError(f"Y must be 3-dim (not {check})")
 
 
-class DataGenFat(DataGenTorch[DataOut, Loader]):
+class DataGenFat(DataGenTorch[DataOut, DataLoader]):
     """
     Generates data for estimating fat shattering dimension.
 
@@ -274,7 +270,7 @@ class DataGenFat(DataGenTorch[DataOut, Loader]):
 
         return data
 
-    def data_to_loader(self, data: DataOut, sr: int, sb: int) -> Loader:
+    def data_to_loader(self, data: DataOut, sr: int, sb: int) -> DataLoader:
         """
         Convert data to pytorch loader.
 
@@ -285,7 +281,7 @@ class DataGenFat(DataGenTorch[DataOut, Loader]):
         :param sb: Current b sample.
         :type sb: int
         :returns: Pytorch data loader.
-        :rtype: Loader
+        :rtype: DataLoader
         :raises ValueError: For invalid data or indeces sr or sb.
         """
         self._check_data(data)
@@ -328,7 +324,7 @@ class DataGenFat(DataGenTorch[DataOut, Loader]):
             raise ValueError(f"Y must be 4-dim (not {check})")
 
 
-class DataGenRademacher(DataGenTorch[DataOut, Loader]):
+class DataGenRademacher(DataGenTorch[DataOut, DataLoader]):
     """
     Generates uniform data for estimating the empirical Rademacher complexity.
 
@@ -377,16 +373,14 @@ class DataGenRademacher(DataGenTorch[DataOut, Loader]):
 
         X = self.prior.gen_data(m * self.num_data_samples)
         X = torch.reshape(X, (self.num_data_samples, m, self.prior.sizex))
-        sigmas = gen_sigmas(
-            m=m * self.num_sigma_samples, seed=self.seed, device=self.device
-        )
+        sigmas = gen_sigmas(m=m * self.num_sigma_samples, seed=self.seed, device=self.device)
         sigmas = torch.reshape(sigmas, (self.num_sigma_samples, m))
 
         data = {"X": X, "sigmas": sigmas}
 
         return data
 
-    def data_to_loader(self, data: DataOut, s: int) -> Loader:
+    def data_to_loader(self, data: DataOut, s: int) -> DataLoader:
         """
         Convert data to pytorch loader.
 
@@ -395,7 +389,7 @@ class DataGenRademacher(DataGenTorch[DataOut, Loader]):
         :param s: Current sample.
         :type s: int
         :return: Pytorch data loader.
-        :rtype: Loader
+        :rtype: DataLoader
         :raises ValueError: For invalid data or index s.
         """
         self._check_data(data)
@@ -442,9 +436,7 @@ class UniformPrior(PriorTorch[Tensor]):
     :param kwargs: Keyword arguments passed to the base class.
     """
 
-    def __init__(
-        self, sizex: int, scale: float = 2.0, shift: float = -1.0, **kwargs
-    ) -> None:
+    def __init__(self, sizex: int, scale: float = 2.0, shift: float = -1.0, **kwargs) -> None:
         super().__init__(sizex, **kwargs)
 
         self.scale = scale
@@ -487,9 +479,7 @@ class NormalPrior(PriorTorch[Tensor]):
     :param kwargs: Keyword arguments passed to the base class.
     """
 
-    def __init__(
-        self, sizex: int, scale: float = 1.0, shift: float = 0.0, **kwargs
-    ) -> None:
+    def __init__(self, sizex: int, scale: float = 1.0, shift: float = 0.0, **kwargs) -> None:
         super().__init__(sizex, **kwargs)
 
         self.scale = scale
@@ -778,8 +768,7 @@ def gen_synthetic_labels_fat(
 
     if d1 != d2:
         raise ValueError(
-            f"The length of b[0] and r[0] are {d1} and {d2}. "
-            f"Should be constant and the same."
+            f"The length of b[0] and r[0] are {d1} and {d2}. " f"Should be constant and the same."
         )
 
     labels = np.zeros((Sr, Sb, d, 1))
@@ -796,9 +785,7 @@ def gen_synthetic_labels_fat(
     return y
 
 
-def gen_sigmas(
-    m: int, seed: Optional[int] = None, device: Device = torch.device("cpu")
-) -> Tensor:
+def gen_sigmas(m: int, seed: Optional[int] = None, device: Device = torch.device("cpu")) -> Tensor:
     """
     Random vector of +-1.
 
@@ -819,11 +806,7 @@ def gen_sigmas(
 
     generator = torch.manual_seed(seed_)
 
-    sigmas = (
-        torch.randint(2, (m,), device=device, requires_grad=False, generator=generator)
-        * 2
-        - 1
-    )
+    sigmas = torch.randint(2, (m,), device=device, requires_grad=False, generator=generator) * 2 - 1
 
     return sigmas
 
@@ -900,10 +883,7 @@ def generate_model_lhs_samples(
         )
         samples.append(sample_parameter.reshape((n_samples,) + p.shape))
     parameter_list = [
-        [
-            torch.tensor(samples[j][i], device=device, dtype=dtype)
-            for j in range(len(samples))
-        ]
+        [torch.tensor(samples[j][i], device=device, dtype=dtype) for j in range(len(samples))]
         for i in range(n_samples)
     ]
 

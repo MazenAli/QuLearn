@@ -1,24 +1,11 @@
-from typing import List, Tuple
-
-# for python < 3.10
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing_extensions import TypeAlias
-
 import logging
-import torch
-from torch.nn import Module
+
 import numpy as np
+import torch
 
-from .trainer import SupervisedTrainer
-from .datagen import DataGenCapacity
-
-Tensor: TypeAlias = torch.Tensor
-Model: TypeAlias = Module
-Datagen: TypeAlias = DataGenCapacity
-Trainer: TypeAlias = SupervisedTrainer
-Capacity = List[Tuple[int, float, int, int]]
+from .datagen import DataGenCapacity as Datagen
+from .trainer import SupervisedTrainer as Trainer
+from .types import Capacity, Model
 
 
 def memory(

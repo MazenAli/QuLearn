@@ -1,19 +1,10 @@
-from typing import List, Iterable
-
-# for python < 3.10
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing_extensions import TypeAlias
-
 import math
 from math import pi
-import torch
-from torch.nn import Module
+from typing import List
 
-Tensor: TypeAlias = torch.Tensor
-Model: TypeAlias = Module
-ParameterList: TypeAlias = List[Iterable[Tensor]]
+import torch
+
+from .types import Model, ParameterList, Tensor
 
 
 def compute_effdim(
@@ -119,9 +110,7 @@ def mc_integrate_fims_effdim(
         sum += weight * torch.exp(logdet - zeta)
     sum /= num_samples
 
-    result = 2.0 * zeta / torch.log(kappa) + 2.0 / torch.log(kappa) * torch.log(
-        1.0 / volume * sum
-    )
+    result = 2.0 * zeta / torch.log(kappa) + 2.0 / torch.log(kappa) * torch.log(1.0 / volume * sum)
 
     return result
 
@@ -147,9 +136,7 @@ def half_log_det(fim: Tensor, c: Tensor) -> Tensor:
     _check_fim(fim)
 
     eigs = torch.linalg.eigvalsh(fim)
-    result = torch.tensor(0.5, device=fim.device, dtype=fim.dtype) * sum(
-        torch.log(1.0 + c * eigs)
-    )
+    result = torch.tensor(0.5, device=fim.device, dtype=fim.dtype) * sum(torch.log(1.0 + c * eigs))
     return result
 
 
@@ -182,9 +169,7 @@ def const_effdim(num_samples: int, gamma: Tensor) -> Tensor:
     return const
 
 
-def norm_const_fim(
-    trace_integral: Tensor, num_parameters: int, volume: Tensor
-) -> Tensor:
+def norm_const_fim(trace_integral: Tensor, num_parameters: int, volume: Tensor) -> Tensor:
     """
     Computes the normalization constant for the Fisher Information Matrix (FIM).
 
@@ -322,7 +307,8 @@ def empirical_fim(model: Model, features: Tensor) -> Tensor:
     :raises ValueError: If invalid features format.
 
     .. note::
-        This function assumes that the output of the model is a differentiable tensor of probabilities.
+        This function assumes that the output of the model is a differentiable
+        tensor of probabilities.
     """
 
     _check_features(features)

@@ -1,11 +1,9 @@
-import os
-import tempfile
 import torch
 from torch.nn import Linear
 from torch.optim import Adam
 
-from qulearn.fat import fat_shattering_dim, check_shattering, normalize_const
 from qulearn.datagen import DataGenFat, UniformPrior
+from qulearn.fat import check_shattering, fat_shattering_dim, normalize_const
 from qulearn.trainer import SupervisedTrainer
 
 
@@ -54,9 +52,7 @@ def test_fat_shattering_dim():
     metrics = {"Loss": loss_fn}
     trainer = SupervisedTrainer(opt, loss_fn=loss_fn, metrics=metrics, num_epochs=100)
 
-    fat_shattering_dimension = fat_shattering_dim(
-        model, datagen, trainer, dmin, dmax, gamma
-    )
+    fat_shattering_dimension = fat_shattering_dim(model, datagen, trainer, dmin, dmax, gamma)
     assert isinstance(fat_shattering_dimension, int)
     assert fat_shattering_dimension > 0
 
@@ -79,9 +75,7 @@ def test_linear_model():
     metrics = {"Loss": loss_fn}
 
     trainer = SupervisedTrainer(opt, loss_fn=loss_fn, metrics=metrics, num_epochs=100)
-    fat_shattering_dimension = fat_shattering_dim(
-        model, datagen, trainer, dmin, dmax, gamma
-    )
+    fat_shattering_dimension = fat_shattering_dim(model, datagen, trainer, dmin, dmax, gamma)
 
     assert isinstance(fat_shattering_dimension, int)
     assert fat_shattering_dimension >= sizex

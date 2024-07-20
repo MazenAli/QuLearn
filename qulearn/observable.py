@@ -1,21 +1,10 @@
-from typing import List, Tuple, Sequence
-
-# for python < 3.10
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing_extensions import TypeAlias
-
 import math
-import torch
+from typing import List
+
 import pennylane as qml
 
+from .types import Hamiltonian, Observable, ParitySequence, Tensor
 from .utils import all_bin_sequences
-
-Tensor: TypeAlias = torch.Tensor
-Observable: TypeAlias = qml.operation.Observable
-Hamiltonian: TypeAlias = qml.Hamiltonian
-ParitySequence: TypeAlias = Sequence[Tuple[int, ...]]
 
 
 def parity_all_hamiltonian(num_qubits: int, weights: Tensor) -> Hamiltonian:

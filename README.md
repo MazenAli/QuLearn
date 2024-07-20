@@ -1,6 +1,8 @@
 # QuLearn
 
-Welcome to QuLearn, a Python package designed to simplify the development and application of quantum and classical machine learning models. It includes a collection of QML applications from Fraunhofer ITWM.
+Welcome to QuLearn, a Python package designed to simplify the development and application of quantum and classical machine learning models.
+This project remained a hobby and is not actively developed anymore.
+It is very difficult to get people to build something they don't have to...
 
 ## About
 
@@ -8,13 +10,12 @@ QuLearn is built on top of [PyTorch](https://pytorch.org/) and [PennyLane](https
 
 QuLearn is suitable for various research applications and aims to democratize access to the exciting field of quantum machine learning. It serves as a platform for researchers, developers, and enthusiasts to implement, experiment, and contribute to this rapidly evolving field.
 
-QuLearn also houses QML applications from Fraunhofer ITWM.
-
 ## Getting Started
 
 ### Installation
 
-(Installation instructions will be added soon.)
+Package is not available on PyPI.
+It can be installed from source via pip, works most of the time.
 
 ### Basic Usage
 

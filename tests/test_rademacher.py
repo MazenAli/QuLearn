@@ -1,13 +1,14 @@
 import logging
 import math
+
 import torch
 from torch.nn import Linear
 from torch.optim import Adam
 
+from qulearn.datagen import DataGenRademacher, NormalPrior
+from qulearn.loss import RademacherLoss
 from qulearn.rademacher import rademacher
 from qulearn.trainer import SupervisedTrainer
-from qulearn.loss import RademacherLoss
-from qulearn.datagen import NormalPrior, DataGenRademacher
 
 
 def test_rademacher():

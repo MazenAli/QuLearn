@@ -1,20 +1,40 @@
-# Minimal makefile for Sphinx documentation
+# Minimal makefile for Sphinx documentation and project maintenance tasks
 #
 
-# You can set these variables from the command line, and also
-# from the environment for the first two.
 SPHINXOPTS    ?=
 SPHINXBUILD   ?= sphinx-build
 SOURCEDIR     = docs
 BUILDDIR      = build
 
-# Put it first so that "make" without argument is like "make help".
+default: all
+
+all: docs-html format format_check static test_coverage secrets_check
+
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-.PHONY: help Makefile
+docs-%:
+	@$(SPHINXBUILD) -M $* "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-# Catch-all target: route all unknown targets to Sphinx using the new
-# "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
-%: Makefile
-	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+format:
+	black --line-length 100 qulearn tests
+	isort --multi-line 3 --trailing-comma --force-grid-wrap 0 --use-parentheses --line-width 100 qulearn tests
+
+format_check:
+	black --line-length 100 --check qulearn tests
+	isort --multi-line 3 --trailing-comma --force-grid-wrap 0 --use-parentheses --line-width 100 qulearn tests --check-only
+
+static:
+	flake8 qulearn tests
+	mypy qulearn tests --ignore-missing-imports --no-strict-optional
+
+test:
+	pytest tests/
+
+test_coverage:
+	coverage run --source=qulearn --module pytest -v tests/ && coverage report -m
+
+secrets_check:
+	@git secrets --scan -r
+
+.PHONY: help docs-% format format_check static test test_coverage secrets_check

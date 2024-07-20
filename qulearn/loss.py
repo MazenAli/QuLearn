@@ -1,15 +1,8 @@
 from typing import Optional
 
-# for python < 3.10
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing_extensions import TypeAlias
-
 import torch
 
-Tensor: TypeAlias = torch.Tensor
-Loss: TypeAlias = torch.nn.Module
+from .types import Loss, Tensor
 
 
 class RademacherLoss(Loss):

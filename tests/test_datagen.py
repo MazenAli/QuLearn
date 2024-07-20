@@ -1,15 +1,16 @@
+import math
+
+import numpy as np
 import pytest
 import torch
-import math
-import numpy as np
-import torch
 from torch.utils.data import DataLoader
+
 from qulearn.datagen import (
     DataGenCapacity,
     DataGenFat,
     DataGenRademacher,
-    UniformPrior,
     NormalPrior,
+    UniformPrior,
     generate_lhs_samples,
     generate_model_lhs_samples,
 )
@@ -258,9 +259,7 @@ def test_generate_model_lhs_samples():
     assert len(parameter_samples) == n_samples
     for sample in parameter_samples:
         assert isinstance(sample, list)
-        assert len(sample) == len(
-            list(filter(lambda p: p.requires_grad, model.parameters()))
-        )
+        assert len(sample) == len(list(filter(lambda p: p.requires_grad, model.parameters())))
         for param in sample:
             assert isinstance(param, torch.Tensor)
             assert (param.detach().numpy() >= lower_bound).all()

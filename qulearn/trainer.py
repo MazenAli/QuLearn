@@ -1,31 +1,11 @@
-from typing import Optional, Callable, Dict
-
-# for python < 3.10
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing_extensions import TypeAlias
-
 from enum import Enum
+from typing import Dict, Optional
 
-import logging
 import torch
 from torch import nn
-from torch.utils.tensorboard import SummaryWriter
-from torch.utils.data import DataLoader
-import pennylane as qml
 
 from .qkernel import QKernel
-
-Optimizer: TypeAlias = torch.optim.Optimizer
-Loss: TypeAlias = torch.nn.Module
-Metric: TypeAlias = Callable
-Writer: TypeAlias = SummaryWriter
-Logger: TypeAlias = logging.Logger
-Model: TypeAlias = qml.QNode
-Loader: TypeAlias = DataLoader
-Tensor: TypeAlias = torch.Tensor
-Parameter: TypeAlias = nn.Parameter
+from .types import DataLoader, Logger, Loss, Metric, Model, Optimizer, Parameter, Tensor, Writer
 
 
 class EpochType(Enum):
@@ -75,53 +55,51 @@ class SupervisedTrainer:
         self.writer = writer
         self.logger = logger
 
-    def train(self, model: Model, train_data: Loader, valid_data: Loader) -> None:
+    def train(self, model: Model, train_data: DataLoader, valid_data: DataLoader) -> None:
         """
         Train the given model using the provided data loaders.
 
         :param model: The model to be trained.
         :type model: Model
         :param train_data: The DataLoader for the training data.
-        :type train_data: Loader
+        :type train_data: DataLoader
         :param valid_data: The DataLoader for the validation data.
-        :type valid_data: Loader
+        :type valid_data: DataLoader
         """
 
         for epoch in range(1, self.num_epochs + 1):
             self.train_epoch(model, train_data, epoch)
             self.validate_epoch(model, valid_data, epoch)
 
-    def train_epoch(self, model: Model, train_data: Loader, epoch: int = 0) -> None:
+    def train_epoch(self, model: Model, train_data: DataLoader, epoch: int = 0) -> None:
         """
         Train the model for one epoch.
 
         :param model: The model to be trained.
         :type model: Model
         :param train_data: The DataLoader for the training data.
-        :type train_data: Loader
+        :type train_data: DataLoader
         :param epoch: The current epoch number. Default is 0.
         :type epoch: int
         """
         epoch_type = EpochType.Train
         self._epoch(epoch_type, model, train_data, epoch)
 
-    def validate_epoch(self, model: Model, valid_data: Loader, epoch: int = 0) -> None:
+    def validate_epoch(self, model: Model, valid_data: DataLoader, epoch: int = 0) -> None:
         """
         Validate the model after an epoch of training.
 
         :param model: The model to be validated.
         :type model: Model
         :param valid_data: The DataLoader for the validation data.
-        :type valid_data: Loader
+        :type valid_data: DataLoader
         :param epoch: The current epoch number. Default is 0.
         :type epoch: int
         """
         epoch_type = EpochType.Validate
         self._epoch(epoch_type, model, valid_data, epoch)
 
-    def _epoch(
-        self, epoch_type: EpochType, model: Model, data: Loader, epoch: int = 0
-    ) -> None:
+    def _epoch(self, epoch_type: EpochType, model: Model, data: DataLoader, epoch: int = 0) -> None:
         running_loss = 0.0
         running_metrics = {}
         for metric in self.metrics:
@@ -154,15 +132,11 @@ class SupervisedTrainer:
         loss.backward()
         self.optimizer.step()
 
-    def _log_metrics(
-        self, phase: str, loss: float, metrics: Dict[str, float], epoch: int
-    ) -> None:
+    def _log_metrics(self, phase: str, loss: float, metrics: Dict[str, float], epoch: int) -> None:
         if self.writer is not None:
             self.writer.add_scalar(f"Loss/{phase}", loss, epoch)
             for metric_name, metric_value in metrics.items():
-                self.writer.add_scalar(
-                    f"Metrics/{phase}/{metric_name}", metric_value, epoch
-                )
+                self.writer.add_scalar(f"Metrics/{phase}/{metric_name}", metric_value, epoch)
 
         if self.logger is not None:
             metrics_strs = [
@@ -197,16 +171,16 @@ class RidgeRegression:
         self.metrics = metrics
         self.logger = logger
 
-    def train(self, model: QKernel, train_data: Loader, valid_data: Loader) -> None:
+    def train(self, model: QKernel, train_data: DataLoader, valid_data: DataLoader) -> None:
         """
         Train the given model using the provided data loaders using Ridge Regression.
 
         :param model: The quantum kernel model to be trained.
         :type model: QKernel
         :param train_data: The DataLoader for the training data.
-        :type train_data: Loader
+        :type train_data: DataLoader
         :param valid_data: The DataLoader for the validation data.
-        :type valid_data: Loader
+        :type valid_data: DataLoader
 
         .. warning::
             Training changes the state of the model by assigning `X_train`.
@@ -237,9 +211,7 @@ class RidgeRegression:
                 running_metrics[metric] = self.metrics[metric](predicted, labels)
         self._log_metrics(phase, running_metrics)
 
-    def kernel_ridge_regression(
-        self, model: QKernel, inputs: Tensor, labels: Tensor
-    ) -> Parameter:
+    def kernel_ridge_regression(self, model: QKernel, inputs: Tensor, labels: Tensor) -> Parameter:
         """
         Compute Ridge Regression solution for the given inputs and labels using the provided model.
 
@@ -258,8 +230,8 @@ class RidgeRegression:
 
         K = model.kernel_matrix(inputs, inputs)
         num_samples = inputs.shape[0]
-        I = torch.eye(num_samples, dtype=labels.dtype, device=labels.device)
-        M = K + self.lambda_reg * I
+        Id = torch.eye(num_samples, dtype=labels.dtype, device=labels.device)
+        M = K + self.lambda_reg * Id
         alpha = nn.Parameter(torch.linalg.solve(M, labels))
 
         return alpha

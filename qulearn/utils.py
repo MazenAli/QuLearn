@@ -1,20 +1,10 @@
 """Frequently used functions."""
 
+import math
+from itertools import chain, combinations
 from typing import Dict, List, Tuple
 
-# for python < 3.10
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing_extensions import TypeAlias
-
-from itertools import chain, combinations
-import math
-import pennylane as qml
-import torch
-
-Tensor: TypeAlias = torch.Tensor
-Observable: TypeAlias = qml.Hamiltonian
+from .types import Observable, Tensor
 
 
 def probabilities_to_dictionary(probs: Tensor) -> Dict[str, Tensor]:
@@ -96,8 +86,7 @@ def parities_outcome(bitstring: str, H: Observable) -> float:
 
     if num_qubits != num_wires:
         raise ValueError(
-            f"Number of qubits ({num_qubits}) "
-            f"does not match number of wires ({num_wires})"
+            f"Number of qubits ({num_qubits}) " f"does not match number of wires ({num_wires})"
         )
 
     sum = 0.0
@@ -125,9 +114,7 @@ def parities_outcome(bitstring: str, H: Observable) -> float:
     return sum
 
 
-def parities_outcome_probs(
-    probs: Dict[str, float], H: Observable
-) -> Dict[float, float]:
+def parities_outcome_probs(probs: Dict[str, float], H: Observable) -> Dict[float, float]:
     """
     Compute (real-valued) outputs with corresponding probabilities.
 

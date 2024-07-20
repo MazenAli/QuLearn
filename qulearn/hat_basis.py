@@ -1,14 +1,8 @@
-# for python < 3.10
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing_extensions import TypeAlias
-
 from typing import Tuple
 
 import torch
 
-Tensor: TypeAlias = torch.Tensor
+from .types import Tensor
 
 
 class HatBasis:
@@ -35,9 +29,9 @@ class HatBasis:
         """
         Find the index of the grid point left of x.
 
-        :param x: A tensor containing the values for which the the position indeces are to be found.
+        :param x: A tensor containing the values for which the position indexes are to be found.
         :type x: Tensor
-        :returns: A tensors of position indeces.
+        :returns: A tensors of position indexes.
         The position indices are -1 for values left of `a`, and -2 for values right of `b`.
         :rtype: Tensor
         """
@@ -47,9 +41,7 @@ class HatBasis:
 
         within_range = torch.logical_not(torch.logical_or(left_of_a, right_of_b))
         position = torch.zeros_like(x)
-        position[within_range] = (
-            (x[within_range] - self.a) / self.segment_length
-        ).floor()
+        position[within_range] = ((x[within_range] - self.a) / self.segment_length).floor()
 
         position[left_of_a] = -1
         position[right_of_b] = -2
@@ -60,9 +52,11 @@ class HatBasis:
         """
         Finds the grid points surrounding given values in the discretized space.
 
-        :param x: A tensor containing the values for which the surrounding grid points are to be found.
+        :param x: A tensor containing the values for which the surrounding
+        grid points are to be found.
         :type x: Tensor
-        :returns: A tuple of two tensors. The first tensor contains the left boundary points of the segments, the second tensor contains the right boundary points of the segments.
+        :returns: A tuple of two tensors. The first tensor contains the left boundary points
+        of the segments, the second tensor contains the right boundary points of the segments.
         :rtype: Tuple[Tensor, Tensor]
         """
 

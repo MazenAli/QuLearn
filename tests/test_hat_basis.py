@@ -1,4 +1,5 @@
 import torch
+
 from qulearn.hat_basis import HatBasis
 
 
@@ -6,27 +7,21 @@ def test_position_left_of_a():
     hat_basis = HatBasis(a=0.0, b=1.0, num_nodes=5)
     x = torch.tensor([-0.1, -1.0])
     expected = torch.tensor([-1, -1])
-    assert torch.equal(
-        hat_basis.position(x), expected
-    ), "Position left of a should be -1"
+    assert torch.equal(hat_basis.position(x), expected), "Position left of a should be -1"
 
 
 def test_position_right_of_b():
     hat_basis = HatBasis(a=0.0, b=1.0, num_nodes=5)
     x = torch.tensor([1.1, 2.0])
     expected = torch.tensor([-2, -2])
-    assert torch.equal(
-        hat_basis.position(x), expected
-    ), "Position right of b should be -2"
+    assert torch.equal(hat_basis.position(x), expected), "Position right of b should be -2"
 
 
 def test_position_within_range():
     hat_basis = HatBasis(a=0.0, b=1.0, num_nodes=5)
     x = torch.tensor([0.25, 0.5, 0.75])
     expected = torch.tensor([1, 2, 3])
-    assert torch.equal(
-        hat_basis.position(x), expected
-    ), "Position within range should be correct"
+    assert torch.equal(hat_basis.position(x), expected), "Position within range should be correct"
 
 
 def test_grid_points_boundary_conditions():

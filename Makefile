@@ -33,6 +33,7 @@ test:
 
 test_coverage:
 	coverage run --source=qulearn --module pytest -v tests/ && coverage report -m
+	coverage xml
 
 secrets_check:
 	@git secrets --scan -r

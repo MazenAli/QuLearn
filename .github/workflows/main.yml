@@ -47,8 +47,8 @@ jobs:
       - name: Set up Poetry virtual environment
         run: |
           poetry config virtualenvs.in-project true
-          poetry install --no-root
+          poetry install --with dev,test,docs
 
       - name: Run Makefile tasks
         run: |
-          make all
+          poetry run make all

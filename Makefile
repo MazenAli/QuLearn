@@ -8,7 +8,7 @@ BUILDDIR      = build
 
 default: all
 
-all: docs-html format format_check static test_coverage secrets_check
+all: docs-html format_check static test_coverage secrets_check
 
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)

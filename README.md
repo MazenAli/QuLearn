@@ -1,5 +1,7 @@
 # QuLearn
 
+[![CI](https://github.com/MazenAli/QuLearn/actions/workflows/main.yml/badge.svg)](https://github.com/MazenAli/QuLearn/actions/workflows/main.yml)
+
 Welcome to QuLearn, a Python package designed to simplify the development and application of quantum and classical machine learning models.
 This project remained a hobby and is not actively developed anymore.
 It is very difficult to get people to build something they don't have to...

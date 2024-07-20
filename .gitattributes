@@ -1,0 +1,5 @@
+# Ignore Jupyter notebooks for language statistics
+*.ipynb linguist-documentation=true
+
+# Set the primary language to Python
+*.py linguist-language=Python

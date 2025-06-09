@@ -39,23 +39,9 @@ jobs:
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: poetry install --no-interaction --no-root
     
-    - name: Update version
-      run: |
-        poetry version ${{ github.event.inputs.version }}
-        git config --global user.name 'GitHub Actions'
-        git config --global user.email 'github-actions@github.com'
-        git add pyproject.toml
-        git commit -m "Bump version to ${{ github.event.inputs.version }}"
-        git tag -a "v${{ github.event.inputs.version }}" -m "Release v${{ github.event.inputs.version }}"
-    
     - name: Build and publish
       env:
         POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
       run: |
         poetry build
         poetry publish --no-interaction
-    
-    - name: Push changes
-      run: |
-        git push
-        git push --tags 

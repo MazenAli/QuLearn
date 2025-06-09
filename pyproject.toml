@@ -1,10 +1,13 @@
 [tool.poetry]
 name = "qulearn"
-version = "0.8.1"
+version = "0.8.2"
 description = "Streamlining quantum and classical machine learning model development."
 authors = ["Mazen Ali <mazen.ali90@gmail.com>"]
 readme = "README.md"
 packages = [{include = "qulearn"}]
+documentation = "https://qulearn.readthedocs.io/"
+repository = "https://github.com/MazenAli/QuLearn"
+homepage = "https://github.com/MazenAli/QuLearn"
 
 [tool.poetry.dependencies]
 python = ">=3.9 <3.12"

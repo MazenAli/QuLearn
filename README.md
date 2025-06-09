@@ -5,7 +5,7 @@
 ![Last Commit](https://img.shields.io/github/last-commit/MazenAli/QuLearn)
 ![GitHub issues](https://img.shields.io/github/issues/MazenAli/QuLearn)
 [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://lbesson.mit-license.org/)
-[![PyPI version](https://badge.fury.io/py/qulearn.svg)](https://badge.fury.io/py/qulearn)
+[![PyPI](https://img.shields.io/pypi/v/qulearn.svg)](https://pypi.org/project/qulearn/)
 [![Documentation Status](https://readthedocs.org/projects/qulearn/badge/?version=latest)](https://qulearn.readthedocs.io/en/latest/?badge=latest)
 
 Welcome to QuLearn, a Python package designed to simplify the development and application of quantum and classical machine learning models.
@@ -22,8 +22,9 @@ QuLearn is suitable for various research applications and aims to democratize ac
 
 ### Installation
 
-Package is not available on PyPI.
-It can be installed from source via pip, works most of the time.
+```bash
+pip install qulearn
+```
 
 ### Basic Usage
 
@@ -128,15 +129,15 @@ class MyHybridModel(torch.nn.Module):
 
 ## Contributing
 
-We greatly appreciate contributions to the QuLearn project! If you're a newcomer, please take a look at our [Contribution Guide](CONTRIBUTING.md), which provides a detailed guide to get you started. You can contribute in many ways, including but not limited to, reporting bugs, suggesting new features, improving documentation, or writing code patches.
+We greatly appreciate contributions to the QuLearn project! If you're a newcomer, please take a look at our [Contribution Guide](https://github.com/MazenAli/QuLearn/blob/main/CONTRIBUTING.md), which provides a detailed guide to get you started. You can contribute in many ways, including but not limited to, reporting bugs, suggesting new features, improving documentation, or writing code patches.
 
-Please remember to follow our [Code of Conduct](CODE_OF_CONDUCT.md), and ensure all your commits follow the Semantic Versioning format.
+Please remember to follow our [Code of Conduct](https://github.com/MazenAli/QuLearn/blob/main/CODE_OF_CONDUCT.md), and ensure all your commits follow the Semantic Versioning format.
 
 For feature additions or bug fixes, please create a new branch and submit a merge request. For main branch protection, at least one other developer is required to review your commit before merging.
 
 ## License
 
-This project is licensed under the terms of the [MIT License](LICENSE).
+This project is licensed under the terms of the [MIT License](https://github.com/MazenAli/QuLearn/blob/main/LICENSE).
 
 ## Contact
 

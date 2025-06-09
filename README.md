@@ -5,6 +5,8 @@
 ![Last Commit](https://img.shields.io/github/last-commit/MazenAli/QuLearn)
 ![GitHub issues](https://img.shields.io/github/issues/MazenAli/QuLearn)
 [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://lbesson.mit-license.org/)
+[![PyPI version](https://badge.fury.io/py/qulearn.svg)](https://badge.fury.io/py/qulearn)
+[![Documentation Status](https://readthedocs.org/projects/qulearn/badge/?version=latest)](https://qulearn.readthedocs.io/en/latest/?badge=latest)
 
 Welcome to QuLearn, a Python package designed to simplify the development and application of quantum and classical machine learning models.
 This project remained a hobby and is not actively developed anymore.
